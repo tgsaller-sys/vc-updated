@@ -256,24 +256,33 @@ export function App() {
           </section>
         ) : null}
 
-        <section className="center-table" aria-label="Current play">
-          <motion.div layout className="deck-stack">
-            <span>{game.deck.length}</span>
-          </motion.div>
-
+        <section className="center-table" aria-label="Discard pile">
           <div className="discard-zone">
             <AnimatePresence mode="popLayout">
-              {(game.currentLeadingPlay?.cards ?? []).map((card) => (
+              {game.currentLeadingPlay === null ? (
                 <motion.div
                   layout
-                  key={card.id}
-                  initial={{ opacity: 0, y: 60, rotate: -8 }}
-                  animate={{ opacity: 1, y: 0, rotate: 0 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
+                  key="empty-discard"
+                  className="discard-placeholder"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                 >
-                  <CardView card={card} disabled />
+                  Discard pile
                 </motion.div>
-              ))}
+              ) : (
+                game.currentLeadingPlay.cards.map((card) => (
+                  <motion.div
+                    layout
+                    key={card.id}
+                    initial={{ opacity: 0, y: 60, rotate: -8 }}
+                    animate={{ opacity: 1, y: 0, rotate: 0 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                  >
+                    <CardView card={card} disabled />
+                  </motion.div>
+                ))
+              )}
             </AnimatePresence>
           </div>
         </section>
