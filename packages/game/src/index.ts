@@ -1,4 +1,4 @@
-export { createDeck, ranks, suits } from "./cards";
+export { compareCardsForPlay, createDeck, playRankOrder, playSuitOrder, ranks, sortCardsForPlay, suits } from "./cards";
 export { createShuffledDeck, dealEqually, shuffleDeck } from "./deck";
 export { reduceGameAction, assertValidTransition } from "./reducer";
 export { allowAnyOwnedCards, validatePlay, validateSkip } from "./rules";

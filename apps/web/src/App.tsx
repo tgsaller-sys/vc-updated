@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Play, RotateCcw, Send, SkipForward, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { CardView } from "@vc/ui";
-import { reduceGameAction, type GameAction, type GameState } from "@vc/game";
+import { reduceGameAction, sortCardsForPlay, type GameAction, type GameState } from "@vc/game";
 import { createDemoGame, createLobbyGame, createPlayer } from "./lib/localGame";
 import { createLobbyCode } from "./lib/lobbyCode";
 import {
@@ -42,6 +42,7 @@ export function App() {
   const localPlayer = game.players.find((player) => player.id === localPlayerId) ?? game.players[0];
   const activePlayerId = localPlayer?.id ?? "";
   const activeHand = game.hands[activePlayerId] ?? [];
+  const sortedActiveHand = useMemo(() => sortCardsForPlay(activeHand), [activeHand]);
   const isActiveTurn = game.currentTurn === activePlayerId;
   const isRemoteLobby = syncMode === "remote";
   const lobbyStatus =
@@ -56,8 +57,8 @@ export function App() {
             : `Connected to lobby ${lobbyCode}`;
   const hasSupabaseConfig = supabaseConfig.hasUrl && supabaseConfig.hasAnonKey;
   const selectedCards = useMemo(
-    () => activeHand.filter((card) => selectedCardIds.includes(card.id)),
-    [activeHand, selectedCardIds]
+    () => sortedActiveHand.filter((card) => selectedCardIds.includes(card.id)),
+    [selectedCardIds, sortedActiveHand]
   );
 
   useEffect(() => {
@@ -312,7 +313,7 @@ export function App() {
           </div>
 
           <motion.div layout className="hand">
-            {activeHand.map((card) => (
+            {sortedActiveHand.map((card) => (
               <CardView
                 key={card.id}
                 card={card}

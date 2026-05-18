@@ -5,7 +5,8 @@ import {
   createInitialGameState,
   dealEqually,
   reduceGameAction,
-  shuffleDeck
+  shuffleDeck,
+  sortCardsForPlay
 } from ".";
 import type { CardId, GameState, Player } from ".";
 
@@ -55,6 +56,28 @@ describe("dealing", () => {
     expect(result.hands.b).toHaveLength(17);
     expect(result.hands.c).toHaveLength(17);
     expect(result.remainder).toHaveLength(1);
+  });
+});
+
+describe("card sorting", () => {
+  it("sorts by VC rank order then suit order", () => {
+    const cards = [
+      { id: "hearts-2", suit: "hearts", rank: "2" },
+      { id: "clubs-3", suit: "clubs", rank: "3" },
+      { id: "spades-A", suit: "spades", rank: "A" },
+      { id: "spades-3", suit: "spades", rank: "3" },
+      { id: "diamonds-A", suit: "diamonds", rank: "A" },
+      { id: "hearts-3", suit: "hearts", rank: "3" }
+    ] as const;
+
+    expect(sortCardsForPlay(cards).map((card) => card.id)).toEqual([
+      "spades-3",
+      "clubs-3",
+      "hearts-3",
+      "spades-A",
+      "diamonds-A",
+      "hearts-2"
+    ]);
   });
 });
 
