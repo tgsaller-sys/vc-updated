@@ -37,6 +37,14 @@ export interface PlayedSet {
   readonly cards: readonly Card[];
 }
 
+export type PlayKind = "single" | "double" | "triple" | "quad" | "straight";
+
+export interface PlayShape {
+  readonly kind: PlayKind;
+  readonly length: number;
+  readonly highRank: Rank;
+}
+
 export type GamePhase = "lobby" | "playing" | "finished";
 
 export interface GameState {

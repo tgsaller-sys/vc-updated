@@ -32,3 +32,7 @@ export function compareCardsForPlay(left: Card, right: Card): number {
 export function sortCardsForPlay(cards: readonly Card[]): readonly Card[] {
   return [...cards].sort(compareCardsForPlay);
 }
+
+export function rankValue(rank: Rank): number {
+  return playRankOrder.indexOf(rank);
+}

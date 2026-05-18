@@ -6,9 +6,10 @@ import {
   dealEqually,
   reduceGameAction,
   shuffleDeck,
-  sortCardsForPlay
+  sortCardsForPlay,
+  validatePlay
 } from ".";
-import type { CardId, GameState, Player } from ".";
+import type { Card, CardId, GameState, Player } from ".";
 
 const players: readonly Player[] = [
   { id: "player-a", name: "Ada", connected: true, joinedAt: "2026-01-01T00:00:00.000Z" },
@@ -26,6 +27,27 @@ function startedGame(count = 3): GameState {
   return assertValidTransition(
     reduceGameAction(lobbyWithPlayers(count), { type: "start", actorId: "player-a", seed: 42 })
   );
+}
+
+function card(id: CardId): Card {
+  const found = createDeck().find((nextCard) => nextCard.id === id);
+
+  if (found === undefined) {
+    throw new Error(`Missing test card ${id}`);
+  }
+
+  return found;
+}
+
+function playingStateWithHands(hands: Readonly<Record<string, readonly Card[]>>): GameState {
+  return {
+    ...createInitialGameState("rules-test"),
+    phase: "playing",
+    players,
+    hands,
+    currentTurn: "player-a",
+    turnOrder: players.map((player) => player.id)
+  };
 }
 
 describe("deck generation", () => {
@@ -86,20 +108,112 @@ describe("valid play detection", () => {
     const state = startedGame();
     const actorId = state.currentTurn ?? "";
     const firstCard = state.hands[actorId]?.[0];
-    const secondCard = state.hands[actorId]?.[1];
 
     expect(firstCard).toBeDefined();
-    expect(secondCard).toBeDefined();
 
     const result = reduceGameAction(state, {
       type: "play-cards",
       actorId,
-      cardIds: [firstCard?.id, secondCard?.id].filter((id): id is CardId => id !== undefined)
+      cardIds: [firstCard?.id].filter((id): id is CardId => id !== undefined)
     });
 
     expect(result.validation.ok).toBe(true);
     expect(result.state.discardPile).toHaveLength(1);
     expect(result.state.currentLeadingPlay?.playerId).toBe(actorId);
+  });
+});
+
+describe("VC play rules", () => {
+  it("allows same-rank doubles, triples, and quads", () => {
+    const state = playingStateWithHands({
+      "player-a": [card("spades-6"), card("clubs-6"), card("diamonds-6"), card("hearts-6")],
+      "player-b": [],
+      "player-c": []
+    });
+
+    expect(validatePlay(state, "player-a", ["spades-6", "clubs-6"]).ok).toBe(true);
+    expect(validatePlay(state, "player-a", ["spades-6", "clubs-6", "diamonds-6"]).ok).toBe(true);
+    expect(validatePlay(state, "player-a", ["spades-6", "clubs-6", "diamonds-6", "hearts-6"]).ok).toBe(true);
+  });
+
+  it("allows straights of three or more consecutive ranks", () => {
+    const state = playingStateWithHands({
+      "player-a": [card("spades-3"), card("clubs-4"), card("diamonds-5"), card("hearts-6")],
+      "player-b": [],
+      "player-c": []
+    });
+
+    expect(validatePlay(state, "player-a", ["spades-3", "clubs-4", "diamonds-5"]).ok).toBe(true);
+    expect(validatePlay(state, "player-a", ["spades-3", "clubs-4", "diamonds-5", "hearts-6"]).ok).toBe(true);
+  });
+
+  it("rejects mixed-rank sets and broken straights", () => {
+    const state = playingStateWithHands({
+      "player-a": [card("spades-6"), card("clubs-6"), card("diamonds-7"), card("hearts-9")],
+      "player-b": [],
+      "player-c": []
+    });
+
+    expect(validatePlay(state, "player-a", ["spades-6", "diamonds-7"]).ok).toBe(false);
+    expect(validatePlay(state, "player-a", ["spades-6", "diamonds-7", "hearts-9"]).ok).toBe(false);
+  });
+
+  it("requires the same format as the leading play", () => {
+    const state: GameState = {
+      ...playingStateWithHands({
+        "player-a": [card("spades-7"), card("clubs-7"), card("diamonds-7"), card("spades-8")],
+        "player-b": [],
+        "player-c": []
+      }),
+      currentLeadingPlay: {
+        playerId: "player-b",
+        cards: [card("spades-6"), card("clubs-6"), card("diamonds-6")]
+      }
+    };
+
+    expect(validatePlay(state, "player-a", ["spades-7", "clubs-7", "diamonds-7"]).ok).toBe(true);
+    expect(validatePlay(state, "player-a", ["spades-8"]).ok).toBe(false);
+    expect(validatePlay(state, "player-a", ["spades-7", "clubs-7"]).ok).toBe(false);
+  });
+
+  it("requires played cards to beat the leading play by rank", () => {
+    const state: GameState = {
+      ...playingStateWithHands({
+        "player-a": [card("spades-5"), card("clubs-5"), card("diamonds-7"), card("hearts-7")],
+        "player-b": [],
+        "player-c": []
+      }),
+      currentLeadingPlay: {
+        playerId: "player-b",
+        cards: [card("spades-6"), card("clubs-6")]
+      }
+    };
+
+    expect(validatePlay(state, "player-a", ["spades-5", "clubs-5"]).ok).toBe(false);
+    expect(validatePlay(state, "player-a", ["diamonds-7", "hearts-7"]).ok).toBe(true);
+  });
+
+  it("requires straights to match length and beat the high rank", () => {
+    const state: GameState = {
+      ...playingStateWithHands({
+        "player-a": [
+          card("spades-4"),
+          card("clubs-5"),
+          card("diamonds-6"),
+          card("hearts-7"),
+          card("spades-8")
+        ],
+        "player-b": [],
+        "player-c": []
+      }),
+      currentLeadingPlay: {
+        playerId: "player-b",
+        cards: [card("spades-3"), card("clubs-4"), card("diamonds-5")]
+      }
+    };
+
+    expect(validatePlay(state, "player-a", ["spades-4", "clubs-5", "diamonds-6"]).ok).toBe(true);
+    expect(validatePlay(state, "player-a", ["spades-4", "clubs-5", "diamonds-6", "hearts-7"]).ok).toBe(false);
   });
 });
 
@@ -208,9 +322,13 @@ describe("skip/reset logic", () => {
 
 describe("win condition", () => {
   it("finishes when a player empties their hand", () => {
-    const state = startedGame(2);
-    const actorId = state.currentTurn ?? "";
-    const handIds = (state.hands[actorId] ?? []).map((card) => card.id);
+    const state = playingStateWithHands({
+      "player-a": [card("spades-3")],
+      "player-b": [card("clubs-4")],
+      "player-c": [card("diamonds-5")]
+    });
+    const actorId = "player-a";
+    const handIds = (state.hands[actorId] ?? []).map((nextCard) => nextCard.id);
 
     const result = reduceGameAction(state, {
       type: "play-cards",

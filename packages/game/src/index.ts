@@ -1,7 +1,7 @@
 export { compareCardsForPlay, createDeck, playRankOrder, playSuitOrder, ranks, sortCardsForPlay, suits } from "./cards";
 export { createShuffledDeck, dealEqually, shuffleDeck } from "./deck";
 export { reduceGameAction, assertValidTransition } from "./reducer";
-export { allowAnyOwnedCards, validatePlay, validateSkip } from "./rules";
+export { allowAnyOwnedCards, identifyPlayShape, validatePlay, validateSkip, validateVcPlay } from "./rules";
 export { createInitialGameState } from "./state";
 export type {
   Card,
@@ -12,6 +12,8 @@ export type {
   PlayedSet,
   Player,
   PlayerId,
+  PlayKind,
+  PlayShape,
   PlayValidationResult,
   Rank,
   RuleValidator,
