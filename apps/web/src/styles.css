@@ -58,6 +58,12 @@ button {
   text-transform: uppercase;
 }
 
+.lobby-status {
+  margin: 0.55rem 0 0;
+  color: #3e4856;
+  font-weight: 800;
+}
+
 .status-cluster {
   display: flex;
   flex-wrap: wrap;

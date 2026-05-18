@@ -33,14 +33,21 @@ export function App() {
   const clearSelection = useUiStore((state) => state.clearSelection);
   const error = useUiStore((state) => state.error);
   const setError = useUiStore((state) => state.setError);
-  const [authenticatedPlayerId, setAuthenticatedPlayerId] = useState(localPlayerId);
   const [authStatus, setAuthStatus] = useState<"checking" | "anonymous" | "local">("checking");
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [syncMode, setSyncMode] = useState<"local" | "remote">("local");
   const [game, setGame] = useState(() => createDemoGame(localPlayerId, createLobbyCode()));
-  const localPlayer = game.players.find((player) => player.id === authenticatedPlayerId) ?? game.players[0];
+  const localPlayer = game.players.find((player) => player.id === localPlayerId) ?? game.players[0];
   const activePlayerId = localPlayer?.id ?? "";
   const activeHand = game.hands[activePlayerId] ?? [];
   const isActiveTurn = game.currentTurn === activePlayerId;
+  const isRemoteLobby = syncMode === "remote";
+  const lobbyStatus =
+    isRemoteLobby && game.phase === "lobby"
+      ? `In lobby ${game.id} with ${game.players.length} player${game.players.length === 1 ? "" : "s"}`
+      : syncMode === "local"
+        ? "Local demo"
+        : `Connected to lobby ${game.id}`;
   const selectedCards = useMemo(
     () => activeHand.filter((card) => selectedCardIds.includes(card.id)),
     [activeHand, selectedCardIds]
@@ -51,15 +58,14 @@ export function App() {
 
     async function authenticate() {
       try {
-        const playerId = await signInAnonymously();
+        const userId = await signInAnonymously();
 
         if (cancelled) {
           return;
         }
 
-        setAuthenticatedPlayerId(playerId);
+        setAuthUserId(userId);
         setAuthStatus("anonymous");
-        setGame(createDemoGame(playerId, createLobbyCode()));
         setError(null);
       } catch (caught) {
         if (cancelled) {
@@ -121,7 +127,7 @@ export function App() {
     clearSelection();
     setError(null);
     setSyncMode("local");
-    setGame(createDemoGame(authenticatedPlayerId, createLobbyCode()));
+    setGame(createDemoGame(localPlayerId, createLobbyCode()));
   }
 
   async function createLobby() {
@@ -134,11 +140,11 @@ export function App() {
 
       if (authStatus !== "anonymous") {
         setSyncMode("local");
-        setGame(createDemoGame(authenticatedPlayerId, nextCode));
+        setGame(createDemoGame(localPlayerId, nextCode));
         return;
       }
 
-      const nextGame = createLobbyGame(authenticatedPlayerId, nextCode);
+      const nextGame = createLobbyGame(localPlayerId, nextCode);
       const remoteGame = await createRemoteGame(nextCode, nextGame);
       setSyncMode("remote");
       setGame(remoteGame);
@@ -161,14 +167,14 @@ export function App() {
 
       if (authStatus !== "anonymous") {
         setSyncMode("local");
-        setGame(createDemoGame(authenticatedPlayerId, nextCode));
+        setGame(createDemoGame(localPlayerId, nextCode));
         return;
       }
 
       const remoteGame = await getRemoteGameByLobbyCode(nextCode);
       const joinedGame = await dispatchValidatedRemoteAction(remoteGame, {
         type: "join",
-        player: createPlayer(authenticatedPlayerId, "Player")
+        player: createPlayer(localPlayerId, `Player ${localPlayerId.slice(0, 4)}`)
       });
       setSyncMode("remote");
       setGame(joinedGame);
@@ -184,10 +190,13 @@ export function App() {
           <div>
             <p className="eyebrow">Lobby {game.id}</p>
             <h1>VC</h1>
+            <p className="lobby-status">{lobbyStatus}</p>
           </div>
           <div className="status-cluster" aria-label="Game status">
             <span>{authStatus === "anonymous" ? "Anonymous" : authStatus === "checking" ? "Signing in" : "Local"}</span>
             <span>{syncMode}</span>
+            <span>You {localPlayerId.slice(0, 4)}</span>
+            {authUserId !== null ? <span>Auth {authUserId.slice(0, 4)}</span> : null}
             <span>{game.phase}</span>
             <span>Turn {game.currentTurn ?? "waiting"}</span>
           </div>
@@ -201,7 +210,7 @@ export function App() {
               className={`player-pill ${game.currentTurn === player.id ? "is-turn" : ""}`}
             >
               <Users size={16} aria-hidden="true" />
-              <span>{player.name}</span>
+              <span>{player.id === localPlayerId ? `${player.name} (you)` : player.name}</span>
               <strong>{game.hands[player.id]?.length ?? 0}</strong>
             </motion.article>
           ))}
