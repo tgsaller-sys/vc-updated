@@ -1,5 +1,5 @@
 create table if not exists public.games (
-  id text primary key,
+  id uuid primary key default gen_random_uuid(),
   lobby_code text not null unique,
   state jsonb not null,
   version integer not null default 0,
@@ -9,7 +9,7 @@ create table if not exists public.games (
 
 create table if not exists public.game_actions (
   id uuid primary key default gen_random_uuid(),
-  game_id text not null references public.games(id) on delete cascade,
+  game_id uuid not null references public.games(id) on delete cascade,
   actor_id text not null,
   action jsonb not null,
   created_at timestamptz not null default now()

@@ -18,8 +18,8 @@ export function createPlayer(playerId: string, name: string): Player {
   };
 }
 
-export function createLobbyGame(localPlayerId: string, lobbyCode: string): GameState {
-  const game = createInitialGameState(lobbyCode);
+export function createLobbyGame(localPlayerId: string, gameId: string): GameState {
+  const game = createInitialGameState(gameId);
   return assertValidTransition(
     reduceGameAction(game, { type: "join", player: createPlayer(localPlayerId, "You") })
   );

@@ -13,7 +13,7 @@ export interface Database {
           readonly updated_at: string;
         };
         readonly Insert: {
-          readonly id: string;
+          readonly id?: string;
           readonly lobby_code: string;
           readonly state: GameState;
           readonly version?: number;

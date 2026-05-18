@@ -36,6 +36,7 @@ export function App() {
   const [authStatus, setAuthStatus] = useState<"checking" | "anonymous" | "local">("checking");
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [syncMode, setSyncMode] = useState<"local" | "remote">("local");
+  const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [game, setGame] = useState(() => createDemoGame(localPlayerId, createLobbyCode()));
   const localPlayer = game.players.find((player) => player.id === localPlayerId) ?? game.players[0];
   const activePlayerId = localPlayer?.id ?? "";
@@ -44,10 +45,10 @@ export function App() {
   const isRemoteLobby = syncMode === "remote";
   const lobbyStatus =
     isRemoteLobby && game.phase === "lobby"
-      ? `In lobby ${game.id} with ${game.players.length} player${game.players.length === 1 ? "" : "s"}`
+      ? `In lobby ${lobbyCode} with ${game.players.length} player${game.players.length === 1 ? "" : "s"}`
       : syncMode === "local"
         ? "Local demo"
-        : `Connected to lobby ${game.id}`;
+        : `Connected to lobby ${lobbyCode}`;
   const selectedCards = useMemo(
     () => activeHand.filter((card) => selectedCardIds.includes(card.id)),
     [activeHand, selectedCardIds]
@@ -97,6 +98,7 @@ export function App() {
 
   async function dispatch(action: GameAction) {
     try {
+      setActionStatus("Sending action...");
       if (syncMode === "remote") {
         const nextState = await dispatchValidatedRemoteAction(game, action);
         setGame(nextState);
@@ -105,8 +107,10 @@ export function App() {
       }
 
       clearSelection();
+      setActionStatus(null);
       setError(null);
     } catch (caught) {
+      setActionStatus(null);
       setError(caught instanceof Error ? caught.message : "Action failed.");
     }
   }
@@ -136,19 +140,23 @@ export function App() {
     try {
       clearSelection();
       setError(null);
+      setActionStatus("Creating lobby...");
       setLobbyCode(nextCode);
 
       if (authStatus !== "anonymous") {
         setSyncMode("local");
         setGame(createDemoGame(localPlayerId, nextCode));
+        setActionStatus(null);
         return;
       }
 
-      const nextGame = createLobbyGame(localPlayerId, nextCode);
+      const nextGame = createLobbyGame(localPlayerId, window.crypto.randomUUID());
       const remoteGame = await createRemoteGame(nextCode, nextGame);
       setSyncMode("remote");
       setGame(remoteGame);
+      setActionStatus(null);
     } catch (caught) {
+      setActionStatus(null);
       setError(caught instanceof Error ? caught.message : "Could not create lobby.");
     }
   }
@@ -164,10 +172,13 @@ export function App() {
     try {
       clearSelection();
       setError(null);
+      setActionStatus("Joining lobby...");
+      setLobbyCode(nextCode);
 
       if (authStatus !== "anonymous") {
         setSyncMode("local");
         setGame(createDemoGame(localPlayerId, nextCode));
+        setActionStatus(null);
         return;
       }
 
@@ -178,7 +189,9 @@ export function App() {
       });
       setSyncMode("remote");
       setGame(joinedGame);
+      setActionStatus(null);
     } catch (caught) {
+      setActionStatus(null);
       setError(caught instanceof Error ? caught.message : "Could not join lobby.");
     }
   }
@@ -215,6 +228,8 @@ export function App() {
             </motion.article>
           ))}
         </section>
+
+        {actionStatus !== null ? <p className="notice-text">{actionStatus}</p> : null}
 
         {game.phase === "lobby" ? (
           <section className="lobby-controls" aria-label="Lobby controls">

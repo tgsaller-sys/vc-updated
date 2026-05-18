@@ -200,7 +200,8 @@ button {
 }
 
 .error-text,
-.winner-text {
+.winner-text,
+.notice-text {
   margin: 0;
   font-weight: 800;
 }
@@ -211,6 +212,10 @@ button {
 
 .winner-text {
   color: #236f4e;
+}
+
+.notice-text {
+  color: #3e4856;
 }
 
 @media (max-width: 680px) {

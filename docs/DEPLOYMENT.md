@@ -15,6 +15,8 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 The current repository keeps rules in TypeScript. Supabase stores the authoritative serialized `GameState`, records submitted actions, and broadcasts `games` row updates through Realtime.
 
+Supabase schema changes are not deployed by Vercel. If `supabase/schema.sql` changes after you have already deployed the frontend, you must also run the updated SQL in Supabase, or the app can authenticate but fail to create/join remote lobbies.
+
 ## Vercel
 
 1. Import this Git repository into Vercel.
