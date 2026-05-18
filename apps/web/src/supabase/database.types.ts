@@ -1,10 +1,12 @@
 import type { GameAction, GameState } from "@vc/game";
 
+export type Json = string | number | boolean | null | { readonly [key: string]: Json | undefined } | readonly Json[];
+
 export interface Database {
-  readonly public: {
-    readonly Tables: {
-      readonly games: {
-        readonly Row: {
+  public: {
+    Tables: {
+      games: {
+        Row: {
           readonly id: string;
           readonly lobby_code: string;
           readonly state: GameState;
@@ -12,39 +14,39 @@ export interface Database {
           readonly created_at: string;
           readonly updated_at: string;
         };
-        readonly Insert: {
+        Insert: {
           readonly id?: string;
           readonly lobby_code: string;
           readonly state: GameState;
           readonly version?: number;
         };
-        readonly Update: {
+        Update: {
           readonly state?: GameState;
           readonly version?: number;
           readonly updated_at?: string;
         };
         readonly Relationships: [];
       };
-      readonly game_actions: {
-        readonly Row: {
+      game_actions: {
+        Row: {
           readonly id: string;
           readonly game_id: string;
           readonly actor_id: string;
           readonly action: GameAction;
           readonly created_at: string;
         };
-        readonly Insert: {
+        Insert: {
           readonly game_id: string;
           readonly actor_id: string;
           readonly action: GameAction;
         };
-        readonly Update: never;
+        Update: never;
         readonly Relationships: [];
       };
     };
-    readonly Views: Record<string, never>;
-    readonly Functions: Record<string, never>;
-    readonly Enums: Record<string, never>;
-    readonly CompositeTypes: Record<string, never>;
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 }

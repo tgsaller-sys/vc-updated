@@ -12,6 +12,7 @@ import {
   signInAnonymously,
   subscribeToGame
 } from "./supabase/gameRepository";
+import { supabaseConfig } from "./supabase/client";
 import { useUiStore } from "./store/uiStore";
 
 function applyAction(state: GameState, action: GameAction): GameState {
@@ -44,11 +45,16 @@ export function App() {
   const isActiveTurn = game.currentTurn === activePlayerId;
   const isRemoteLobby = syncMode === "remote";
   const lobbyStatus =
-    isRemoteLobby && game.phase === "lobby"
-      ? `In lobby ${lobbyCode} with ${game.players.length} player${game.players.length === 1 ? "" : "s"}`
-      : syncMode === "local"
-        ? "Local demo"
-        : `Connected to lobby ${lobbyCode}`;
+    !supabaseConfig.hasUrl || !supabaseConfig.hasAnonKey
+      ? "Supabase env vars missing in this deployment"
+      : authStatus === "local"
+        ? "Supabase sign-in failed; using local demo mode"
+        : isRemoteLobby && game.phase === "lobby"
+          ? `In lobby ${lobbyCode} with ${game.players.length} player${game.players.length === 1 ? "" : "s"}`
+          : syncMode === "local"
+            ? "Local demo"
+            : `Connected to lobby ${lobbyCode}`;
+  const hasSupabaseConfig = supabaseConfig.hasUrl && supabaseConfig.hasAnonKey;
   const selectedCards = useMemo(
     () => activeHand.filter((card) => selectedCardIds.includes(card.id)),
     [activeHand, selectedCardIds]
@@ -206,6 +212,7 @@ export function App() {
             <p className="lobby-status">{lobbyStatus}</p>
           </div>
           <div className="status-cluster" aria-label="Game status">
+            <span>{hasSupabaseConfig ? "Supabase env OK" : "Supabase env missing"}</span>
             <span>{authStatus === "anonymous" ? "Anonymous" : authStatus === "checking" ? "Signing in" : "Local"}</span>
             <span>{syncMode}</span>
             <span>You {localPlayerId.slice(0, 4)}</span>
