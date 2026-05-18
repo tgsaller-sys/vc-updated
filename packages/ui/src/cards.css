@@ -1,0 +1,60 @@
+.vc-card {
+  inline-size: clamp(4.6rem, 8vw, 6.4rem);
+  aspect-ratio: 120 / 168;
+  border: 0;
+  padding: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  filter: drop-shadow(0 12px 18px rgb(20 26 35 / 0.2));
+}
+
+.vc-card:disabled {
+  cursor: default;
+}
+
+.vc-card svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.vc-card rect {
+  fill: #fffdf8;
+  stroke: #20242c;
+  stroke-width: 3px;
+}
+
+.vc-card.is-selected rect {
+  fill: #fff9da;
+  stroke: #d79526;
+}
+
+.vc-card-red {
+  color: #b72638;
+}
+
+.vc-card-black {
+  color: #1f2733;
+}
+
+.vc-card text {
+  fill: currentColor;
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.vc-card-rank {
+  font-size: 22px;
+}
+
+.vc-card-corner-suit {
+  font-size: 20px;
+}
+
+.vc-card-suit {
+  dominant-baseline: middle;
+  font-size: 58px;
+  text-anchor: middle;
+}

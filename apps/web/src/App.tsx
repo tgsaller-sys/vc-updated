@@ -1,0 +1,233 @@
+import { AnimatePresence, motion } from "framer-motion";
+import { Play, RotateCcw, Send, SkipForward, Users } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { CardView } from "@vc/ui";
+import { reduceGameAction, type GameAction, type GameState } from "@vc/game";
+import { createDemoGame } from "./lib/localGame";
+import { createLobbyCode } from "./lib/lobbyCode";
+import { signInAnonymously } from "./supabase/gameRepository";
+import { useUiStore } from "./store/uiStore";
+
+function applyAction(state: GameState, action: GameAction): GameState {
+  const result = reduceGameAction(state, action);
+
+  if (!result.validation.ok) {
+    throw new Error(result.validation.reason);
+  }
+
+  return result.state;
+}
+
+export function App() {
+  const localPlayerId = useUiStore((state) => state.localPlayerId);
+  const lobbyCode = useUiStore((state) => state.lobbyCode);
+  const setLobbyCode = useUiStore((state) => state.setLobbyCode);
+  const selectedCardIds = useUiStore((state) => state.selectedCardIds);
+  const toggleCard = useUiStore((state) => state.toggleCard);
+  const clearSelection = useUiStore((state) => state.clearSelection);
+  const error = useUiStore((state) => state.error);
+  const setError = useUiStore((state) => state.setError);
+  const [authenticatedPlayerId, setAuthenticatedPlayerId] = useState(localPlayerId);
+  const [authStatus, setAuthStatus] = useState<"checking" | "anonymous" | "local">("checking");
+  const [game, setGame] = useState(() => createDemoGame(localPlayerId, createLobbyCode()));
+  const localPlayer = game.players.find((player) => player.id === authenticatedPlayerId) ?? game.players[0];
+  const activePlayerId = localPlayer?.id ?? "";
+  const activeHand = game.hands[activePlayerId] ?? [];
+  const isActiveTurn = game.currentTurn === activePlayerId;
+  const selectedCards = useMemo(
+    () => activeHand.filter((card) => selectedCardIds.includes(card.id)),
+    [activeHand, selectedCardIds]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function authenticate() {
+      try {
+        const playerId = await signInAnonymously();
+
+        if (cancelled) {
+          return;
+        }
+
+        setAuthenticatedPlayerId(playerId);
+        setAuthStatus("anonymous");
+        setGame(createDemoGame(playerId, createLobbyCode()));
+        setError(null);
+      } catch (caught) {
+        if (cancelled) {
+          return;
+        }
+
+        setAuthStatus("local");
+        setError(caught instanceof Error ? caught.message : "Anonymous sign-in failed.");
+      }
+    }
+
+    void authenticate();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setError]);
+
+  function dispatch(action: GameAction) {
+    try {
+      setGame((state) => applyAction(state, action));
+      clearSelection();
+      setError(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Action failed.");
+    }
+  }
+
+  function startGame() {
+    dispatch({ type: "start", actorId: activePlayerId, seed: Date.now() });
+  }
+
+  function playSelectedCards() {
+    dispatch({ type: "play-cards", actorId: activePlayerId, cardIds: selectedCards.map((card) => card.id) });
+  }
+
+  function skipTurn() {
+    dispatch({ type: "skip", actorId: activePlayerId });
+  }
+
+  function resetDemo() {
+    clearSelection();
+    setError(null);
+    setGame(createDemoGame(authenticatedPlayerId, createLobbyCode()));
+  }
+
+  function createLobby() {
+    clearSelection();
+    setError(null);
+    const nextCode = createLobbyCode();
+    setLobbyCode(nextCode);
+    setGame(createDemoGame(authenticatedPlayerId, nextCode));
+  }
+
+  function joinLobby() {
+    const nextCode = lobbyCode.trim();
+
+    if (nextCode.length === 0) {
+      setError("Enter a lobby code first.");
+      return;
+    }
+
+    clearSelection();
+    setError(null);
+    setGame(createDemoGame(authenticatedPlayerId, nextCode));
+  }
+
+  return (
+    <main className="app-shell">
+      <section className="tabletop" aria-label="VC game table">
+        <header className="top-bar">
+          <div>
+            <p className="eyebrow">Lobby {game.id}</p>
+            <h1>VC</h1>
+          </div>
+          <div className="status-cluster" aria-label="Game status">
+            <span>{authStatus === "anonymous" ? "Anonymous" : authStatus === "checking" ? "Signing in" : "Local"}</span>
+            <span>{game.phase}</span>
+            <span>Turn {game.currentTurn ?? "waiting"}</span>
+          </div>
+        </header>
+
+        <section className="players-strip" aria-label="Players">
+          {game.players.map((player) => (
+            <motion.article
+              layout
+              key={player.id}
+              className={`player-pill ${game.currentTurn === player.id ? "is-turn" : ""}`}
+            >
+              <Users size={16} aria-hidden="true" />
+              <span>{player.name}</span>
+              <strong>{game.hands[player.id]?.length ?? 0}</strong>
+            </motion.article>
+          ))}
+        </section>
+
+        {game.phase === "lobby" ? (
+          <section className="lobby-controls" aria-label="Lobby controls">
+            <button type="button" onClick={createLobby}>
+              Create Lobby
+            </button>
+            <input
+              value={lobbyCode}
+              maxLength={8}
+              onChange={(event) => setLobbyCode(event.target.value)}
+              placeholder="CODE"
+              aria-label="Lobby code"
+            />
+            <button type="button" onClick={joinLobby}>
+              Join
+            </button>
+          </section>
+        ) : null}
+
+        <section className="center-table" aria-label="Current play">
+          <motion.div layout className="deck-stack">
+            <span>{game.deck.length}</span>
+          </motion.div>
+
+          <div className="discard-zone">
+            <AnimatePresence mode="popLayout">
+              {(game.currentLeadingPlay?.cards ?? []).map((card) => (
+                <motion.div
+                  layout
+                  key={card.id}
+                  initial={{ opacity: 0, y: 60, rotate: -8 }}
+                  animate={{ opacity: 1, y: 0, rotate: 0 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                >
+                  <CardView card={card} disabled />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </section>
+
+        <section className="hand-panel" aria-label="Your hand">
+          <div className="hand-actions">
+            {game.phase === "lobby" ? (
+              <button type="button" onClick={startGame}>
+                <Play size={18} aria-hidden="true" />
+                Start
+              </button>
+            ) : (
+              <>
+                <button type="button" disabled={!isActiveTurn || selectedCards.length === 0} onClick={playSelectedCards}>
+                  <Send size={18} aria-hidden="true" />
+                  Play {selectedCards.length}
+                </button>
+                <button type="button" disabled={!isActiveTurn || game.currentLeadingPlay === null} onClick={skipTurn}>
+                  <SkipForward size={18} aria-hidden="true" />
+                  Skip
+                </button>
+              </>
+            )}
+            <button type="button" onClick={resetDemo} aria-label="Reset demo">
+              <RotateCcw size={18} aria-hidden="true" />
+            </button>
+          </div>
+
+          <motion.div layout className="hand">
+            {activeHand.map((card) => (
+              <CardView
+                key={card.id}
+                card={card}
+                selected={selectedCardIds.includes(card.id)}
+                disabled={game.phase !== "playing" || !isActiveTurn}
+                onClick={(nextCard) => toggleCard(nextCard.id)}
+              />
+            ))}
+          </motion.div>
+          {error !== null ? <p className="error-text">{error}</p> : null}
+          {game.winnerId !== null ? <p className="winner-text">Winner: {game.winnerId}</p> : null}
+        </section>
+      </section>
+    </main>
+  );
+}
