@@ -15,6 +15,8 @@ import {
 import { supabaseConfig } from "./supabase/client";
 import { useUiStore } from "./store/uiStore";
 
+const buildLabel = "discard-sort-ui";
+
 function applyAction(state: GameState, action: GameAction): GameState {
   const result = reduceGameAction(state, action);
 
@@ -214,6 +216,7 @@ export function App() {
           </div>
           <div className="status-cluster" aria-label="Game status">
             <span>{hasSupabaseConfig ? "Supabase env OK" : "Supabase env missing"}</span>
+            <span>{buildLabel}</span>
             <span>{authStatus === "anonymous" ? "Anonymous" : authStatus === "checking" ? "Signing in" : "Local"}</span>
             <span>{syncMode}</span>
             <span>You {localPlayerId.slice(0, 4)}</span>
