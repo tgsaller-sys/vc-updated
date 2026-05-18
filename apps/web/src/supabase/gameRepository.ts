@@ -64,6 +64,26 @@ export async function createRemoteGame(lobbyCode: string, state: GameState): Pro
   return data.state;
 }
 
+export async function getRemoteGameByLobbyCode(lobbyCode: string): Promise<GameState> {
+  const client = supabase;
+
+  if (client === null) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const { data, error } = await client
+    .from("games")
+    .select("state")
+    .eq("lobby_code", lobbyCode)
+    .single();
+
+  if (error !== null) {
+    throw error;
+  }
+
+  return data.state;
+}
+
 export async function dispatchValidatedRemoteAction(
   state: GameState,
   action: GameAction
