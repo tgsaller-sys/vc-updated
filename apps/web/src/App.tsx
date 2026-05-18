@@ -14,6 +14,7 @@ import {
 } from "./supabase/gameRepository";
 import { supabaseConfig } from "./supabase/client";
 import { useUiStore } from "./store/uiStore";
+import { buildHead } from "./buildInfo";
 
 const buildLabel = "discard-sort-ui";
 
@@ -211,6 +212,7 @@ export function App() {
         <header className="top-bar">
           <div>
             <p className="eyebrow">Lobby {game.id}</p>
+            <p className="build-head">HEAD {buildHead}</p>
             <h1>VC</h1>
             <p className="lobby-status">{lobbyStatus}</p>
           </div>

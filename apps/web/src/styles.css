@@ -58,6 +58,14 @@ button {
   text-transform: uppercase;
 }
 
+.build-head {
+  margin: 0 0 0.35rem;
+  color: #17202f;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
 .lobby-status {
   margin: 0.55rem 0 0;
   color: #3e4856;
