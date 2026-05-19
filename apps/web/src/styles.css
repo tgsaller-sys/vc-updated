@@ -275,6 +275,14 @@ button {
 
 .lobby-controls input {
   inline-size: 9rem;
+}
+
+.lobby-controls .player-name-input {
+  inline-size: min(14rem, 100%);
+  text-transform: none;
+}
+
+.lobby-controls .lobby-code-input {
   text-transform: uppercase;
 }
 

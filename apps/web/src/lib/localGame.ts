@@ -18,15 +18,15 @@ export function createPlayer(playerId: string, name: string): Player {
   };
 }
 
-export function createLobbyGame(localPlayerId: string, gameId: string): GameState {
+export function createLobbyGame(localPlayerId: string, playerName: string, gameId: string): GameState {
   const game = createInitialGameState(gameId);
   return assertValidTransition(
-    reduceGameAction(game, { type: "join", player: createPlayer(localPlayerId, "You") })
+    reduceGameAction(game, { type: "join", player: createPlayer(localPlayerId, playerName) })
   );
 }
 
-export function createDemoGame(localPlayerId: string, lobbyCode: string): GameState {
-  const localPlayer = createPlayer(localPlayerId, "You");
+export function createDemoGame(localPlayerId: string, playerName: string, lobbyCode: string): GameState {
+  const localPlayer = createPlayer(localPlayerId, playerName);
   const guestPlayer = createPlayer("local-guest", "Local Guest");
 
   const game = createInitialGameState(lobbyCode);

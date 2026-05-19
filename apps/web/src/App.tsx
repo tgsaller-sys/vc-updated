@@ -73,6 +73,8 @@ function OpponentHand({ cardCount, isSkipped, isTurn, player }: OpponentHandProp
 
 export function App() {
   const localPlayerId = useUiStore((state) => state.localPlayerId);
+  const playerName = useUiStore((state) => state.playerName);
+  const setPlayerName = useUiStore((state) => state.setPlayerName);
   const lobbyCode = useUiStore((state) => state.lobbyCode);
   const setLobbyCode = useUiStore((state) => state.setLobbyCode);
   const selectedCardIds = useUiStore((state) => state.selectedCardIds);
@@ -84,7 +86,8 @@ export function App() {
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [syncMode, setSyncMode] = useState<"local" | "remote">("local");
   const [actionStatus, setActionStatus] = useState<string | null>(null);
-  const [game, setGame] = useState(() => createDemoGame(localPlayerId, createLobbyCode()));
+  const preferredPlayerName = playerName.trim() || `Player ${localPlayerId.slice(0, 4)}`;
+  const [game, setGame] = useState(() => createDemoGame(localPlayerId, preferredPlayerName, createLobbyCode()));
   const localPlayer = game.players.find((player) => player.id === localPlayerId) ?? game.players[0];
   const activePlayerId = localPlayer?.id ?? "";
   const activeHand = game.hands[activePlayerId] ?? [];
@@ -178,6 +181,10 @@ export function App() {
     void dispatch({ type: "start", actorId: activePlayerId, seed: Date.now() });
   }
 
+  function savePlayerName() {
+    void dispatch({ type: "join", player: createPlayer(localPlayerId, preferredPlayerName) });
+  }
+
   function playSelectedCards() {
     void dispatch({ type: "play-cards", actorId: activePlayerId, cardIds: selectedCards.map((card) => card.id) });
   }
@@ -190,7 +197,7 @@ export function App() {
     clearSelection();
     setError(null);
     setSyncMode("local");
-    setGame(createDemoGame(localPlayerId, createLobbyCode()));
+    setGame(createDemoGame(localPlayerId, preferredPlayerName, createLobbyCode()));
   }
 
   async function createLobby() {
@@ -204,12 +211,12 @@ export function App() {
 
       if (authStatus !== "anonymous") {
         setSyncMode("local");
-        setGame(createDemoGame(localPlayerId, nextCode));
+        setGame(createDemoGame(localPlayerId, preferredPlayerName, nextCode));
         setActionStatus(null);
         return;
       }
 
-      const nextGame = createLobbyGame(localPlayerId, window.crypto.randomUUID());
+      const nextGame = createLobbyGame(localPlayerId, preferredPlayerName, window.crypto.randomUUID());
       const remoteGame = await createRemoteGame(nextCode, nextGame);
       setSyncMode("remote");
       setGame(remoteGame);
@@ -236,7 +243,7 @@ export function App() {
 
       if (authStatus !== "anonymous") {
         setSyncMode("local");
-        setGame(createDemoGame(localPlayerId, nextCode));
+        setGame(createDemoGame(localPlayerId, preferredPlayerName, nextCode));
         setActionStatus(null);
         return;
       }
@@ -244,7 +251,7 @@ export function App() {
       const remoteGame = await getRemoteGameByLobbyCode(nextCode);
       const joinedGame = await dispatchValidatedRemoteAction(remoteGame, {
         type: "join",
-        player: createPlayer(localPlayerId, `Player ${localPlayerId.slice(0, 4)}`)
+        player: createPlayer(localPlayerId, preferredPlayerName)
       });
       setSyncMode("remote");
       setGame(joinedGame);
@@ -295,10 +302,22 @@ export function App() {
 
         {game.phase === "lobby" ? (
           <section className="lobby-controls" aria-label="Lobby controls">
+            <input
+              className="player-name-input"
+              value={playerName}
+              maxLength={24}
+              onChange={(event) => setPlayerName(event.target.value)}
+              placeholder="Your name"
+              aria-label="Your name"
+            />
+            <button type="button" onClick={savePlayerName}>
+              Save Name
+            </button>
             <button type="button" onClick={() => void createLobby()}>
               Create Lobby
             </button>
             <input
+              className="lobby-code-input"
               value={lobbyCode}
               maxLength={8}
               onChange={(event) => setLobbyCode(event.target.value)}
@@ -320,9 +339,9 @@ export function App() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9 }}
               >
-              BOMB!
-            </motion.div>
-          ) : null}
+                BOMB!
+              </motion.div>
+            ) : null}
           </AnimatePresence>
           <div className="table-focus">
             <div className="opponents-panel" aria-label="Other players">
