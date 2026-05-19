@@ -2,7 +2,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Play, RotateCcw, Send, SkipForward, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { CardView } from "@vc/ui";
-import { isBombPlay, reduceGameAction, sortCardsForPlay, type GameAction, type GameState } from "@vc/game";
+import {
+  isBombPlay,
+  reduceGameAction,
+  sortCardsForPlay,
+  type GameAction,
+  type GameState,
+  type Player
+} from "@vc/game";
 import { createDemoGame, createLobbyGame, createPlayer } from "./lib/localGame";
 import { createLobbyCode } from "./lib/lobbyCode";
 import {
@@ -28,6 +35,42 @@ function applyAction(state: GameState, action: GameAction): GameState {
   return result.state;
 }
 
+interface OpponentHandProps {
+  readonly cardCount: number;
+  readonly isSkipped: boolean;
+  readonly isTurn: boolean;
+  readonly player: Player;
+}
+
+function OpponentHand({ cardCount, isSkipped, isTurn, player }: OpponentHandProps) {
+  const visibleCards = Array.from({ length: Math.min(cardCount, 12) }, (_value, index) => index);
+
+  return (
+    <motion.article layout className={`opponent-hand ${isTurn ? "is-turn" : ""} ${isSkipped ? "is-skipped" : ""}`}>
+      <div className="opponent-meta">
+        <span>{player.name}</span>
+        <strong>{cardCount}</strong>
+      </div>
+      <div className="opponent-card-row" aria-label={`${player.name} has ${cardCount} cards`}>
+        <AnimatePresence initial={false}>
+          {visibleCards.map((index) => (
+            <motion.div
+              layout
+              key={`${player.id}-${index}`}
+              className="opponent-card-back"
+              initial={{ opacity: 0, x: -12, rotate: -8 }}
+              animate={{ opacity: 1, x: 0, rotate: (index - visibleCards.length / 2) * 2.5 }}
+              exit={{ opacity: 0, y: -12, scale: 0.82 }}
+              transition={{ type: "spring", stiffness: 420, damping: 32 }}
+            />
+          ))}
+        </AnimatePresence>
+      </div>
+      {isSkipped ? <span className="opponent-state">Skipped</span> : null}
+    </motion.article>
+  );
+}
+
 export function App() {
   const localPlayerId = useUiStore((state) => state.localPlayerId);
   const lobbyCode = useUiStore((state) => state.lobbyCode);
@@ -46,6 +89,10 @@ export function App() {
   const activePlayerId = localPlayer?.id ?? "";
   const activeHand = game.hands[activePlayerId] ?? [];
   const sortedActiveHand = useMemo(() => sortCardsForPlay(activeHand), [activeHand]);
+  const opponents = useMemo(
+    () => game.players.filter((player) => player.id !== localPlayerId),
+    [game.players, localPlayerId]
+  );
   const isActiveTurn = game.currentTurn === activePlayerId;
   const isRemoteLobby = syncMode === "remote";
   const lobbyStatus =
@@ -264,7 +311,7 @@ export function App() {
           </section>
         ) : null}
 
-        <section className="center-table" aria-label="Discard pile">
+        <section className="center-table" aria-label="Table">
           <AnimatePresence>
             {showBombCallout ? (
               <motion.div
@@ -273,37 +320,53 @@ export function App() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9 }}
               >
-                BOMB!
-              </motion.div>
-            ) : null}
+              BOMB!
+            </motion.div>
+          ) : null}
           </AnimatePresence>
-          <div className="discard-zone">
-            <AnimatePresence mode="popLayout">
-              {game.currentLeadingPlay === null ? (
-                <motion.div
-                  layout
-                  key="empty-discard"
-                  className="discard-placeholder"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  Discard pile
-                </motion.div>
-              ) : (
-                game.currentLeadingPlay.cards.map((card) => (
+          <div className="table-focus">
+            <div className="opponents-panel" aria-label="Other players">
+              <AnimatePresence initial={false}>
+                {opponents.map((player) => (
+                  <OpponentHand
+                    key={player.id}
+                    player={player}
+                    cardCount={game.hands[player.id]?.length ?? 0}
+                    isTurn={game.currentTurn === player.id}
+                    isSkipped={game.skippedPlayers.includes(player.id)}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+
+            <div className="discard-zone" aria-label="Discard pile">
+              <AnimatePresence mode="popLayout">
+                {game.currentLeadingPlay === null ? (
                   <motion.div
                     layout
-                    key={card.id}
-                    initial={{ opacity: 0, y: 60, rotate: -8 }}
-                    animate={{ opacity: 1, y: 0, rotate: 0 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
+                    key="empty-discard"
+                    className="discard-placeholder"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                   >
-                    <CardView card={card} disabled />
+                    Discard pile
                   </motion.div>
-                ))
-              )}
-            </AnimatePresence>
+                ) : (
+                  game.currentLeadingPlay.cards.map((card) => (
+                    <motion.div
+                      layout
+                      key={card.id}
+                      initial={{ opacity: 0, y: 60, rotate: -8 }}
+                      animate={{ opacity: 1, y: 0, rotate: 0 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                    >
+                      <CardView card={card} disabled />
+                    </motion.div>
+                  ))
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </section>
 

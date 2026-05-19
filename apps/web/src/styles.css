@@ -117,9 +117,6 @@ button {
 
 .center-table {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   padding: clamp(0.5rem, 3vw, 3rem);
   border-block: 1px solid rgb(23 32 47 / 0.12);
 }
@@ -145,6 +142,79 @@ button {
 .hand {
   display: flex;
   align-items: center;
+}
+
+.table-focus {
+  display: grid;
+  grid-template-columns: minmax(13rem, 18rem) minmax(14rem, 1fr);
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2.5rem);
+  inline-size: 100%;
+}
+
+.opponents-panel {
+  display: grid;
+  gap: 0.75rem;
+  min-inline-size: 0;
+}
+
+.opponent-hand {
+  display: grid;
+  gap: 0.45rem;
+  min-block-size: 5.2rem;
+  border: 1px solid rgb(23 32 47 / 0.16);
+  border-radius: 8px;
+  padding: 0.65rem;
+  background: rgb(255 255 255 / 0.68);
+  box-shadow: 0 10px 26px rgb(37 45 58 / 0.08);
+}
+
+.opponent-hand.is-turn {
+  border-color: #2b875f;
+  box-shadow: 0 0 0 3px rgb(43 135 95 / 0.18);
+}
+
+.opponent-hand.is-skipped {
+  opacity: 0.58;
+}
+
+.opponent-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-weight: 900;
+}
+
+.opponent-card-row {
+  display: flex;
+  align-items: center;
+  min-block-size: 2.7rem;
+  overflow: hidden;
+  padding-inline: 0.35rem;
+}
+
+.opponent-card-back {
+  flex: 0 0 auto;
+  inline-size: 1.55rem;
+  aspect-ratio: 120 / 168;
+  border: 1px solid #17202f;
+  border-radius: 4px;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.16) 25%, transparent 25%) 0 0 / 8px 8px,
+    #2b875f;
+  box-shadow: 0 5px 10px rgb(23 32 47 / 0.18);
+}
+
+.opponent-card-back + .opponent-card-back {
+  margin-inline-start: -0.55rem;
+}
+
+.opponent-state {
+  color: #7a4c11;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .discard-zone {
@@ -252,4 +322,11 @@ button {
     justify-content: start;
   }
 
+  .table-focus {
+    grid-template-columns: 1fr;
+  }
+
+  .opponents-panel {
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  }
 }
