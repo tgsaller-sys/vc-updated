@@ -115,6 +115,10 @@ export function App() {
   );
   const showBombCallout =
     game.currentLeadingPlay !== null && isBombPlay(game.currentLeadingPlay.cards) && game.currentLeadingPlay.cards.length > 1;
+  const winnerName =
+    game.winnerId === null
+      ? null
+      : (game.players.find((player) => player.id === game.winnerId)?.name ?? game.winnerId);
 
   useEffect(() => {
     let cancelled = false;
@@ -331,9 +335,21 @@ export function App() {
         ) : null}
 
         <section className="center-table" aria-label="Table">
-          <AnimatePresence>
-            {showBombCallout ? (
+          <AnimatePresence mode="popLayout">
+            {winnerName !== null ? (
               <motion.div
+                key="winner"
+                className="winner-callout"
+                initial={{ opacity: 0, scale: 0.72, y: 18 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ type: "spring", stiffness: 360, damping: 24 }}
+              >
+                {winnerName} wins!
+              </motion.div>
+            ) : showBombCallout ? (
+              <motion.div
+                key="bomb"
                 className="bomb-callout"
                 initial={{ opacity: 0, scale: 0.76, y: 12 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
