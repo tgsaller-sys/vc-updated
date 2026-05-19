@@ -49,12 +49,40 @@
   font-size: 22px;
 }
 
-.vc-card-corner-suit {
-  font-size: 20px;
+.vc-card-glyph {
+  color: currentColor;
 }
 
-.vc-card-suit {
-  dominant-baseline: middle;
-  font-size: 58px;
-  text-anchor: middle;
+.vc-card-glyph-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 7px;
+}
+
+.vc-card-glyph-metal {
+  fill: #f8f3e7;
+  stroke: currentColor;
+  stroke-linejoin: round;
+  stroke-width: 6px;
+}
+
+.vc-card-glyph-accent {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-linejoin: round;
+  stroke-width: 5px;
+}
+
+.vc-card-glyph-highlight {
+  fill: rgb(255 255 255 / 0.42);
+  stroke: currentColor;
+  stroke-linejoin: round;
+  stroke-width: 4px;
+}
+
+.vc-card-glyph-hearts .vc-card-glyph-highlight,
+.vc-card-glyph-diamonds .vc-card-glyph-highlight {
+  fill: rgb(255 255 255 / 0.55);
 }
