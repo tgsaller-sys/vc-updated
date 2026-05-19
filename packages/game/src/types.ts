@@ -77,6 +77,7 @@ export type GameAction =
       readonly type: "start";
       readonly actorId: PlayerId;
       readonly seed: number;
+      readonly maxCardsPerPlayer?: number;
     }
   | {
       readonly type: "play-cards";

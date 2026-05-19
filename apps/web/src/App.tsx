@@ -73,6 +73,8 @@ export function App() {
   const localPlayerId = useUiStore((state) => state.localPlayerId);
   const playerName = useUiStore((state) => state.playerName);
   const setPlayerName = useUiStore((state) => state.setPlayerName);
+  const maxCardsPerPlayer = useUiStore((state) => state.maxCardsPerPlayer);
+  const setMaxCardsPerPlayer = useUiStore((state) => state.setMaxCardsPerPlayer);
   const lobbyCode = useUiStore((state) => state.lobbyCode);
   const setLobbyCode = useUiStore((state) => state.setLobbyCode);
   const selectedCardIds = useUiStore((state) => state.selectedCardIds);
@@ -197,7 +199,7 @@ export function App() {
   }
 
   function startGame() {
-    void dispatch({ type: "start", actorId: activePlayerId, seed: Date.now() });
+    void dispatch({ type: "start", actorId: activePlayerId, seed: Date.now(), maxCardsPerPlayer });
   }
 
   function savePlayerName() {
@@ -345,6 +347,18 @@ export function App() {
             <button type="button" onClick={() => void joinLobby()}>
               Join
             </button>
+            <label className="max-cards-control">
+              <span>Max cards</span>
+              <input
+                type="number"
+                min={1}
+                max={52}
+                step={1}
+                value={maxCardsPerPlayer}
+                onChange={(event) => setMaxCardsPerPlayer(event.currentTarget.valueAsNumber)}
+                aria-label="Maximum cards per player"
+              />
+            </label>
           </section>
         ) : null}
 

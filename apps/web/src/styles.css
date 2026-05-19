@@ -269,7 +269,8 @@ button {
 
 .hand-actions button,
 .lobby-controls button,
-.lobby-controls input {
+.lobby-controls input,
+.max-cards-control {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -281,6 +282,11 @@ button {
   background: #ffffff;
   color: #17202f;
   font-weight: 800;
+}
+
+.max-cards-control {
+  gap: 0.5rem;
+  background: rgb(255 255 255 / 0.72);
 }
 
 .hand-actions button,
@@ -299,6 +305,14 @@ button {
 
 .lobby-controls .lobby-code-input {
   text-transform: uppercase;
+}
+
+.max-cards-control input {
+  min-block-size: auto;
+  inline-size: 4.4rem;
+  border: 0;
+  padding: 0;
+  background: transparent;
 }
 
 .hand-actions button:disabled {

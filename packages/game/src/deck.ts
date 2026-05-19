@@ -2,6 +2,8 @@ import { createDeck } from "./cards";
 import { seededRandom } from "./random";
 import type { Card, PlayerId } from "./types";
 
+const requiredStartingCardId = "spades-3";
+
 export function shuffleDeck(deck: readonly Card[], seed: number): readonly Card[] {
   const random = seededRandom(seed);
   const shuffled = [...deck];
@@ -84,6 +86,23 @@ function findPlayerWithCard(hands: Readonly<Record<PlayerId, readonly Card[]>>, 
   return null;
 }
 
+function limitDeckForDeal(deck: readonly Card[], maxCardsPerPlayer: number, playerCount: number): readonly Card[] {
+  const cardCount = Math.min(deck.length, Math.max(1, Math.floor(maxCardsPerPlayer)) * playerCount);
+  const limitedDeck = deck.slice(0, cardCount);
+
+  if (limitedDeck.some((card) => card.id === requiredStartingCardId)) {
+    return limitedDeck;
+  }
+
+  const requiredCard = deck.find((card) => card.id === requiredStartingCardId);
+
+  if (requiredCard === undefined || limitedDeck.length === 0) {
+    return limitedDeck;
+  }
+
+  return [...limitedDeck.slice(0, -1), requiredCard];
+}
+
 /**
  * Deals every card for VC. When cards cannot divide evenly, extra cards begin
  * with the player who receives the 3 of spades and continue in turn order.
@@ -109,6 +128,22 @@ export function dealForVc(players: readonly PlayerId[], deck: readonly Card[]): 
   }
 
   throw new Error("Could not assign extra cards to the player holding the 3 of spades.");
+}
+
+/**
+ * Deals a VC game with an optional cap on each player's starting hand while
+ * preserving the 3 of spades as a dealt card so the opening rule can run.
+ */
+export function dealForVcWithMaxCards(
+  players: readonly PlayerId[],
+  deck: readonly Card[],
+  maxCardsPerPlayer: number
+): Readonly<Record<PlayerId, readonly Card[]>> {
+  if (players.length === 0) {
+    throw new Error("Cannot deal cards without players.");
+  }
+
+  return dealForVc(players, limitDeckForDeal(deck, maxCardsPerPlayer, players.length));
 }
 
 export function createShuffledDeck(seed: number): readonly Card[] {

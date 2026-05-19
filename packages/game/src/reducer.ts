@@ -1,4 +1,4 @@
-import { createShuffledDeck, dealForVc } from "./deck";
+import { createShuffledDeck, dealForVc, dealForVcWithMaxCards } from "./deck";
 import { allOtherPlayersSkipped, nextEligiblePlayerId, nextPlayerId } from "./turns";
 import { setPlayerConnection, upsertPlayer } from "./state";
 import { validatePlay, validateSkip } from "./rules";
@@ -30,6 +30,18 @@ function findPlayerWithCard(hands: Readonly<Record<string, readonly Card[]>>, ca
   }
 
   return null;
+}
+
+function validateMaxCardsPerPlayer(maxCardsPerPlayer: number | undefined): ValidationResult {
+  if (maxCardsPerPlayer === undefined) {
+    return { ok: true };
+  }
+
+  if (!Number.isInteger(maxCardsPerPlayer) || maxCardsPerPlayer < 1 || maxCardsPerPlayer > 52) {
+    return { ok: false, reason: "Max cards per player must be a whole number from 1 to 52." };
+  }
+
+  return { ok: true };
 }
 
 /**
@@ -79,8 +91,18 @@ export function reduceGameAction(
         return { state, validation: { ok: false, reason: "Only a joined player can start the game." } };
       }
 
+      const maxCardsValidation = validateMaxCardsPerPlayer(action.maxCardsPerPlayer);
+
+      if (!maxCardsValidation.ok) {
+        return { state, validation: maxCardsValidation };
+      }
+
       const turnOrder = state.players.map((player) => player.id);
-      const hands = dealForVc(turnOrder, createShuffledDeck(action.seed));
+      const deck = createShuffledDeck(action.seed);
+      const hands =
+        action.maxCardsPerPlayer === undefined
+          ? dealForVc(turnOrder, deck)
+          : dealForVcWithMaxCards(turnOrder, deck, action.maxCardsPerPlayer);
       const startingPlayerId = findPlayerWithCard(hands, "spades-3");
 
       return {

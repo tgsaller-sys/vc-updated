@@ -5,6 +5,7 @@ import {
   createInitialGameState,
   dealEqually,
   dealForVc,
+  dealForVcWithMaxCards,
   reduceGameAction,
   shuffleDeck,
   sortCardsForPlay,
@@ -103,6 +104,30 @@ describe("dealing", () => {
     expect(result["player-4"]).toHaveLength(11);
     expect(result["player-5"]).toHaveLength(10);
     expect(result["player-3"]?.map((nextCard) => nextCard.id)).toContain("spades-3");
+  });
+
+  it("caps VC hands at the requested maximum", () => {
+    const result = dealForVcWithMaxCards(["player-1", "player-2", "player-3"], createDeck(), 5);
+
+    expect(result["player-1"]).toHaveLength(5);
+    expect(result["player-2"]).toHaveLength(5);
+    expect(result["player-3"]).toHaveLength(5);
+    expect(Object.values(result).flat().map((nextCard) => nextCard.id)).toContain("spades-3");
+  });
+
+  it("starts capped games with the player holding the 3 of spades", () => {
+    const state = assertValidTransition(
+      reduceGameAction(lobbyWithPlayers(3), {
+        type: "start",
+        actorId: "player-a",
+        seed: 7,
+        maxCardsPerPlayer: 5
+      })
+    );
+
+    expect(Object.values(state.hands).every((hand) => hand.length <= 5)).toBe(true);
+    expect(state.currentTurn).toBe(playerHoldingCard(state, "spades-3"));
+    expect(state.deck).toHaveLength(0);
   });
 });
 
