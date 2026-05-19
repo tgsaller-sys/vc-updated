@@ -8,7 +8,7 @@ export {
   sortCardsForPlay,
   suits
 } from "./cards";
-export { createShuffledDeck, dealEqually, shuffleDeck } from "./deck";
+export { createShuffledDeck, dealEqually, dealForVc, shuffleDeck } from "./deck";
 export { reduceGameAction, assertValidTransition } from "./reducer";
 export {
   allowAnyOwnedCards,

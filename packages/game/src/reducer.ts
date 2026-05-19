@@ -1,4 +1,4 @@
-import { createShuffledDeck, dealEqually } from "./deck";
+import { createShuffledDeck, dealForVc } from "./deck";
 import { allOtherPlayersSkipped, nextEligiblePlayerId, nextPlayerId } from "./turns";
 import { setPlayerConnection, upsertPlayer } from "./state";
 import { validatePlay, validateSkip } from "./rules";
@@ -80,15 +80,15 @@ export function reduceGameAction(
       }
 
       const turnOrder = state.players.map((player) => player.id);
-      const dealt = dealEqually(turnOrder, createShuffledDeck(action.seed));
-      const startingPlayerId = findPlayerWithCard(dealt.hands, "spades-3");
+      const hands = dealForVc(turnOrder, createShuffledDeck(action.seed));
+      const startingPlayerId = findPlayerWithCard(hands, "spades-3");
 
       return {
         state: bumpVersion({
           ...state,
           phase: "playing",
-          hands: dealt.hands,
-          deck: dealt.remainder,
+          hands,
+          deck: [],
           currentTurn: startingPlayerId,
           currentLeadingPlay: null,
           skippedPlayers: [],

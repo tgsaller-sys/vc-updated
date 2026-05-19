@@ -4,6 +4,7 @@ import {
   createDeck,
   createInitialGameState,
   dealEqually,
+  dealForVc,
   reduceGameAction,
   shuffleDeck,
   sortCardsForPlay,
@@ -88,6 +89,20 @@ describe("dealing", () => {
     expect(result.hands.b).toHaveLength(17);
     expect(result.hands.c).toHaveLength(17);
     expect(result.remainder).toHaveLength(1);
+  });
+
+  it("deals VC extras starting with the player holding the 3 of spades", () => {
+    const deck = createDeck().filter((nextCard) => nextCard.id !== "spades-3");
+    const spadesThree = card("spades-3");
+    const riggedDeck = [...deck.slice(0, 21), spadesThree, ...deck.slice(21)];
+    const result = dealForVc(["player-1", "player-2", "player-3", "player-4", "player-5"], riggedDeck);
+
+    expect(result["player-1"]).toHaveLength(10);
+    expect(result["player-2"]).toHaveLength(10);
+    expect(result["player-3"]).toHaveLength(11);
+    expect(result["player-4"]).toHaveLength(11);
+    expect(result["player-5"]).toHaveLength(10);
+    expect(result["player-3"]?.map((nextCard) => nextCard.id)).toContain("spades-3");
   });
 });
 
