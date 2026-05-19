@@ -43,6 +43,7 @@ export interface PlayShape {
   readonly kind: PlayKind;
   readonly length: number;
   readonly highRank: Rank;
+  readonly highCard: Card;
 }
 
 export type GamePhase = "lobby" | "playing" | "finished";

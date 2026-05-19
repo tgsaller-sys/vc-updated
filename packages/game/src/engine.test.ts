@@ -238,6 +238,23 @@ describe("VC play rules", () => {
     expect(validatePlay(state, "player-a", ["diamonds-7", "hearts-7"]).ok).toBe(true);
   });
 
+  it("uses the highest card suit to break ties in same-rank sets", () => {
+    const state: GameState = {
+      ...playingStateWithHands({
+        "player-a": [card("spades-5"), card("hearts-5"), card("clubs-5"), card("diamonds-5")],
+        "player-b": [],
+        "player-c": []
+      }),
+      currentLeadingPlay: {
+        playerId: "player-b",
+        cards: [card("clubs-5"), card("diamonds-5")]
+      }
+    };
+
+    expect(validatePlay(state, "player-a", ["spades-5", "hearts-5"]).ok).toBe(true);
+    expect(validatePlay(state, "player-a", ["spades-5", "clubs-5"]).ok).toBe(false);
+  });
+
   it("requires straights to match length and beat the high rank", () => {
     const state: GameState = {
       ...playingStateWithHands({
@@ -259,6 +276,22 @@ describe("VC play rules", () => {
 
     expect(validatePlay(state, "player-a", ["spades-4", "clubs-5", "diamonds-6"]).ok).toBe(true);
     expect(validatePlay(state, "player-a", ["spades-4", "clubs-5", "diamonds-6", "hearts-7"]).ok).toBe(false);
+  });
+
+  it("uses the highest card suit to break ties in straights", () => {
+    const state: GameState = {
+      ...playingStateWithHands({
+        "player-a": [card("spades-4"), card("spades-5"), card("clubs-6")],
+        "player-b": [],
+        "player-c": []
+      }),
+      currentLeadingPlay: {
+        playerId: "player-b",
+        cards: [card("hearts-4"), card("hearts-5"), card("spades-6")]
+      }
+    };
+
+    expect(validatePlay(state, "player-a", ["spades-4", "spades-5", "clubs-6"]).ok).toBe(true);
   });
 });
 

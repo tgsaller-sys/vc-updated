@@ -1,4 +1,4 @@
-import { findCardsById, rankValue, sortCardsForPlay } from "./cards";
+import { compareCardsForPlay, findCardsById, highestCardForPlay, rankValue, sortCardsForPlay } from "./cards";
 import type {
   Card,
   CardId,
@@ -75,20 +75,34 @@ export function identifyPlayShape(cards: readonly Card[]): PlayShape | null {
   const multipleKind = getMultipleKind(cards.length);
 
   if (multipleKind !== null && sameRank(cards)) {
+    const highCard = highestCardForPlay(cards);
+
+    if (highCard === null) {
+      return null;
+    }
+
     return {
       kind: multipleKind,
       length: cards.length,
-      highRank: cards[0]?.rank ?? "3"
+      highRank: highCard.rank,
+      highCard
     };
   }
 
   const highStraightRank = straightHighRank(cards);
 
   if (highStraightRank !== null) {
+    const highCard = highestCardForPlay(cards);
+
+    if (highCard === null) {
+      return null;
+    }
+
     return {
       kind: "straight",
       length: cards.length,
-      highRank: highStraightRank
+      highRank: highStraightRank,
+      highCard
     };
   }
 
@@ -131,7 +145,7 @@ export const validateVcPlay: RuleValidator = (state, _actorId, cards) => {
     return { ok: false, reason: "Play the same format as the current leading play or skip." };
   }
 
-  if (rankValue(nextShape.highRank) <= rankValue(leadingShape.highRank)) {
+  if (compareCardsForPlay(nextShape.highCard, leadingShape.highCard) <= 0) {
     return { ok: false, reason: "Play higher cards than the current leading play or skip." };
   }
 

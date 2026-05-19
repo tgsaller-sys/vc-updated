@@ -33,6 +33,10 @@ export function sortCardsForPlay(cards: readonly Card[]): readonly Card[] {
   return [...cards].sort(compareCardsForPlay);
 }
 
+export function highestCardForPlay(cards: readonly Card[]): Card | null {
+  return sortCardsForPlay(cards).at(-1) ?? null;
+}
+
 export function rankValue(rank: Rank): number {
   return playRankOrder.indexOf(rank);
 }
