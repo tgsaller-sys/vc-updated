@@ -438,9 +438,11 @@ export function App() {
                 </button>
               </>
             )}
-            <button type="button" onClick={resetDemo} aria-label="Reset demo">
-              <RotateCcw size={18} aria-hidden="true" />
-            </button>
+            {syncMode === "local" ? (
+              <button type="button" onClick={resetDemo} aria-label="Reset demo">
+                <RotateCcw size={18} aria-hidden="true" />
+              </button>
+            ) : null}
           </div>
 
           <motion.div layout className="hand">
