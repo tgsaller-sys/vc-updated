@@ -1,4 +1,5 @@
 import { createShuffledDeck, dealForVc, dealForVcWithMaxCards } from "./deck";
+import { sortCardsForPlay } from "./cards";
 import { allOtherPlayersSkipped, nextEligiblePlayerId, nextPlayerId } from "./turns";
 import { setPlayerConnection, upsertPlayer } from "./state";
 import { validatePlay, validateSkip } from "./rules";
@@ -30,6 +31,21 @@ function findPlayerWithCard(hands: Readonly<Record<string, readonly Card[]>>, ca
   }
 
   return null;
+}
+
+function findOpeningCard(hands: Readonly<Record<string, readonly Card[]>>): Card | null {
+  const cards = Object.values(hands).flat();
+  return cards.find((card) => card.id === "spades-3") ?? sortCardsForPlay(cards).at(0) ?? null;
+}
+
+function findOpeningPlayer(hands: Readonly<Record<string, readonly Card[]>>): string | null {
+  const openingCard = findOpeningCard(hands);
+
+  if (openingCard === null) {
+    return null;
+  }
+
+  return findPlayerWithCard(hands, openingCard.id);
 }
 
 function validateMaxCardsPerPlayer(maxCardsPerPlayer: number | undefined): ValidationResult {
@@ -103,7 +119,7 @@ export function reduceGameAction(
         action.maxCardsPerPlayer === undefined
           ? dealForVc(turnOrder, deck)
           : dealForVcWithMaxCards(turnOrder, deck, action.maxCardsPerPlayer);
-      const startingPlayerId = findPlayerWithCard(hands, "spades-3");
+      const startingPlayerId = findOpeningPlayer(hands);
 
       return {
         state: bumpVersion({

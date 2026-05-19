@@ -41,6 +41,11 @@ function playerHoldingCard(state: GameState, cardId: CardId): string {
   return player[0];
 }
 
+function openingCardId(state: GameState): CardId {
+  const cards = Object.values(state.hands).flat();
+  return (cards.find((nextCard) => nextCard.id === "spades-3") ?? sortCardsForPlay(cards)[0])?.id ?? "spades-3";
+}
+
 function card(id: CardId): Card {
   const found = createDeck().find((nextCard) => nextCard.id === id);
 
@@ -112,10 +117,10 @@ describe("dealing", () => {
     expect(result["player-1"]).toHaveLength(5);
     expect(result["player-2"]).toHaveLength(5);
     expect(result["player-3"]).toHaveLength(5);
-    expect(Object.values(result).flat().map((nextCard) => nextCard.id)).toContain("spades-3");
+    expect(Object.values(result).flat()).toHaveLength(15);
   });
 
-  it("starts capped games with the player holding the 3 of spades", () => {
+  it("starts capped games with the player holding the lowest card when the 3 of spades is absent", () => {
     const state = assertValidTransition(
       reduceGameAction(lobbyWithPlayers(3), {
         type: "start",
@@ -126,7 +131,8 @@ describe("dealing", () => {
     );
 
     expect(Object.values(state.hands).every((hand) => hand.length <= 5)).toBe(true);
-    expect(state.currentTurn).toBe(playerHoldingCard(state, "spades-3"));
+    expect(openingCardId(state)).not.toBe("spades-3");
+    expect(state.currentTurn).toBe(playerHoldingCard(state, openingCardId(state)));
     expect(state.deck).toHaveLength(0);
   });
 });
@@ -241,6 +247,17 @@ describe("VC play rules", () => {
     expect(validatePlay(state, "player-a", ["clubs-4"]).ok).toBe(false);
     expect(validatePlay(state, "player-a", ["spades-3"]).ok).toBe(true);
     expect(validatePlay(state, "player-a", ["spades-3", "clubs-4", "diamonds-5"]).ok).toBe(true);
+  });
+
+  it("requires the first play to include the lowest dealt card when the 3 of spades is absent", () => {
+    const state = playingStateWithHands({
+      "player-a": [card("clubs-4"), card("diamonds-5"), card("hearts-6")],
+      "player-b": [card("spades-5")],
+      "player-c": []
+    });
+
+    expect(validatePlay(state, "player-a", ["diamonds-5"]).ok).toBe(false);
+    expect(validatePlay(state, "player-a", ["clubs-4"]).ok).toBe(true);
   });
 
   it("requires the same format as the leading play", () => {

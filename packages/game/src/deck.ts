@@ -1,8 +1,6 @@
-import { createDeck } from "./cards";
+import { createDeck, sortCardsForPlay } from "./cards";
 import { seededRandom } from "./random";
 import type { Card, PlayerId } from "./types";
-
-const requiredStartingCardId = "spades-3";
 
 export function shuffleDeck(deck: readonly Card[], seed: number): readonly Card[] {
   const random = seededRandom(seed);
@@ -88,19 +86,25 @@ function findPlayerWithCard(hands: Readonly<Record<PlayerId, readonly Card[]>>, 
 
 function limitDeckForDeal(deck: readonly Card[], maxCardsPerPlayer: number, playerCount: number): readonly Card[] {
   const cardCount = Math.min(deck.length, Math.max(1, Math.floor(maxCardsPerPlayer)) * playerCount);
-  const limitedDeck = deck.slice(0, cardCount);
+  return deck.slice(0, cardCount);
+}
 
-  if (limitedDeck.some((card) => card.id === requiredStartingCardId)) {
-    return limitedDeck;
+function openingCardId(cards: readonly Card[]): string | null {
+  if (cards.some((card) => card.id === "spades-3")) {
+    return "spades-3";
   }
 
-  const requiredCard = deck.find((card) => card.id === requiredStartingCardId);
+  return sortCardsForPlay(cards).at(0)?.id ?? null;
+}
 
-  if (requiredCard === undefined || limitedDeck.length === 0) {
-    return limitedDeck;
+function findOpeningPlayer(hands: Readonly<Record<PlayerId, readonly Card[]>>): PlayerId | null {
+  const nextOpeningCardId = openingCardId(Object.values(hands).flat());
+
+  if (nextOpeningCardId === null) {
+    return null;
   }
 
-  return [...limitedDeck.slice(0, -1), requiredCard];
+  return findPlayerWithCard(hands, nextOpeningCardId);
 }
 
 /**
@@ -120,19 +124,18 @@ export function dealForVc(players: readonly PlayerId[], deck: readonly Card[]): 
 
   for (let firstExtraIndex = 0; firstExtraIndex < players.length; firstExtraIndex += 1) {
     const hands = dealWithExtraStart(players, deck, firstExtraIndex);
-    const holderId = findPlayerWithCard(hands, "spades-3");
+    const holderId = findOpeningPlayer(hands);
 
     if (holderId === players[firstExtraIndex]) {
       return hands;
     }
   }
 
-  throw new Error("Could not assign extra cards to the player holding the 3 of spades.");
+  throw new Error("Could not assign extra cards to the opening player.");
 }
 
 /**
- * Deals a VC game with an optional cap on each player's starting hand while
- * preserving the 3 of spades as a dealt card so the opening rule can run.
+ * Deals a VC game with an optional cap on each player's starting hand.
  */
 export function dealForVcWithMaxCards(
   players: readonly PlayerId[],

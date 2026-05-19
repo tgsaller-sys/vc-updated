@@ -169,6 +169,11 @@ function isSingleTwo(shape: PlayShape): boolean {
   return shape.kind === "single" && shape.highCard.rank === "2";
 }
 
+function openingCardForState(state: GameState): Card | null {
+  const cards = Object.values(state.hands).flat();
+  return cards.find((card) => card.id === "spades-3") ?? sortCardsForPlay(cards).at(0) ?? null;
+}
+
 export const validateVcPlay: RuleValidator = (state, _actorId, cards) => {
   const nextShape = identifyPlayShape(cards);
 
@@ -179,12 +184,12 @@ export const validateVcPlay: RuleValidator = (state, _actorId, cards) => {
     };
   }
 
-  if (
-    state.discardPile.length === 0 &&
-    state.currentLeadingPlay === null &&
-    !cards.some((card) => card.id === "spades-3")
-  ) {
-    return { ok: false, reason: "The first play must include the 3 of spades." };
+  if (state.discardPile.length === 0 && state.currentLeadingPlay === null) {
+    const openingCard = openingCardForState(state);
+
+    if (openingCard !== null && !cards.some((card) => card.id === openingCard.id)) {
+      return { ok: false, reason: `The first play must include the ${openingCard.rank} of ${openingCard.suit}.` };
+    }
   }
 
   if (state.currentLeadingPlay === null) {
