@@ -162,6 +162,20 @@ describe("VC play rules", () => {
     expect(validatePlay(state, "player-a", ["spades-3", "clubs-4", "diamonds-5", "hearts-6"]).ok).toBe(true);
   });
 
+  it("rejects straights that include a 2", () => {
+    const state = playingStateWithHands({
+      "player-a": [card("spades-K"), card("clubs-A"), card("diamonds-2"), card("spades-3")],
+      "player-b": [],
+      "player-c": []
+    });
+    const stateAfterOpening = {
+      ...state,
+      discardPile: [{ playerId: "player-b", cards: [card("spades-3")] }]
+    };
+
+    expect(validatePlay(stateAfterOpening, "player-a", ["spades-K", "clubs-A", "diamonds-2"]).ok).toBe(false);
+  });
+
   it("rejects mixed-rank sets and broken straights", () => {
     const state = playingStateWithHands({
       "player-a": [card("spades-3"), card("spades-6"), card("clubs-6"), card("diamonds-7"), card("hearts-9")],

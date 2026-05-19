@@ -44,6 +44,10 @@ function straightHighRank(cards: readonly Card[]): Card["rank"] | null {
     return null;
   }
 
+  if (cards.some((card) => card.rank === "2")) {
+    return null;
+  }
+
   const sorted = sortCardsForPlay(cards);
   const values = sorted.map((card) => rankValue(card.rank));
 
