@@ -130,6 +130,7 @@ export function reduceGameAction(
           currentTurn: startingPlayerId,
           currentLeadingPlay: null,
           skippedPlayers: [],
+          lastEvent: null,
           turnOrder
         }),
         validation: { ok: true }
@@ -152,6 +153,7 @@ export function reduceGameAction(
         hands: nextHands,
         discardPile: [...state.discardPile, { playerId: action.actorId, cards: validation.cards }],
         currentLeadingPlay: { playerId: action.actorId, cards: validation.cards },
+        lastEvent: { type: "play", playerId: action.actorId },
         skippedPlayers: state.skippedPlayers,
         currentTurn: nextEligiblePlayerId(state.turnOrder, action.actorId, state.skippedPlayers),
         phase: nextHands[action.actorId]?.length === 0 ? "finished" : state.phase,
@@ -180,6 +182,7 @@ export function reduceGameAction(
             ...state,
             currentTurn: currentLeadingPlayer,
             currentLeadingPlay: null,
+            lastEvent: { type: "skip", playerId: action.actorId },
             skippedPlayers: []
           }),
           validation: { ok: true }
@@ -190,6 +193,7 @@ export function reduceGameAction(
         state: bumpVersion({
           ...state,
           skippedPlayers,
+          lastEvent: { type: "skip", playerId: action.actorId },
           currentTurn: nextPlayerId(state.turnOrder, action.actorId)
         }),
         validation: { ok: true }

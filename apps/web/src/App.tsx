@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Play, RotateCcw, Send, SkipForward, Users } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CardView } from "@vc/ui";
 import {
   isBombPlay,
@@ -85,6 +85,8 @@ export function App() {
   const [authStatus, setAuthStatus] = useState<"checking" | "anonymous" | "local">("checking");
   const [syncMode, setSyncMode] = useState<"local" | "remote">("local");
   const [actionStatus, setActionStatus] = useState<string | null>(null);
+  const [passNotice, setPassNotice] = useState<string | null>(null);
+  const lastPassNoticeKey = useRef<string | null>(null);
   const preferredPlayerName = playerName.trim() || `Player ${localPlayerId.slice(0, 4)}`;
   const [game, setGame] = useState(() => createDemoGame(localPlayerId, preferredPlayerName, createLobbyCode()));
   const localPlayer = game.players.find((player) => player.id === localPlayerId) ?? game.players[0];
@@ -138,6 +140,29 @@ export function App() {
     game.winnerId === null
       ? null
       : (game.players.find((player) => player.id === game.winnerId)?.name ?? game.winnerId);
+
+  useEffect(() => {
+    if (game.lastEvent?.type !== "skip") {
+      return undefined;
+    }
+
+    const noticeKey = `${game.id}-${game.version}-${game.lastEvent.playerId}`;
+
+    if (lastPassNoticeKey.current === noticeKey) {
+      return undefined;
+    }
+
+    lastPassNoticeKey.current = noticeKey;
+    const passingPlayerName =
+      game.players.find((player) => player.id === game.lastEvent?.playerId)?.name ?? "A player";
+    setPassNotice(`${passingPlayerName} passes.`);
+
+    const timeoutId = window.setTimeout(() => {
+      setPassNotice(null);
+    }, 1800);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [game.id, game.lastEvent, game.players, game.version]);
 
   useEffect(() => {
     let cancelled = false;
@@ -385,6 +410,20 @@ export function App() {
                 exit={{ opacity: 0, scale: 0.9 }}
               >
                 BOMB!
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+          <AnimatePresence>
+            {passNotice !== null ? (
+              <motion.div
+                key={passNotice}
+                className="pass-callout"
+                initial={{ opacity: 0, y: 12, scale: 0.94 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.96 }}
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              >
+                {passNotice}
               </motion.div>
             ) : null}
           </AnimatePresence>

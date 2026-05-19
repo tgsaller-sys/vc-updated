@@ -24,6 +24,7 @@ export type {
   Card,
   CardId,
   GameAction,
+  GameEvent,
   GamePhase,
   GameState,
   PlayedSet,

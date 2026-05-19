@@ -48,6 +48,16 @@ export interface PlayShape {
 
 export type GamePhase = "lobby" | "playing" | "finished";
 
+export type GameEvent =
+  | {
+      readonly type: "skip";
+      readonly playerId: PlayerId;
+    }
+  | {
+      readonly type: "play";
+      readonly playerId: PlayerId;
+    };
+
 export interface GameState {
   readonly id: string;
   readonly phase: GamePhase;
@@ -59,6 +69,7 @@ export interface GameState {
   readonly currentLeadingPlay: PlayedSet | null;
   readonly skippedPlayers: readonly PlayerId[];
   readonly winnerId: PlayerId | null;
+  readonly lastEvent: GameEvent | null;
   readonly turnOrder: readonly PlayerId[];
   readonly version: number;
 }

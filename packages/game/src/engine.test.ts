@@ -532,6 +532,7 @@ describe("skip/reset logic", () => {
     const afterPlayerTwoSkip = assertValidTransition(
       reduceGameAction(afterPlayerOne, { type: "skip", actorId: "player-b" })
     );
+    expect(afterPlayerTwoSkip.lastEvent).toEqual({ type: "skip", playerId: "player-b" });
     const afterPlayerThree = assertValidTransition(
       reduceGameAction(afterPlayerTwoSkip, {
         type: "play-cards",
@@ -592,6 +593,7 @@ describe("skip/reset logic", () => {
     expect(afterSecondSkip.currentTurn).toBe("player-a");
     expect(afterSecondSkip.currentLeadingPlay).toBeNull();
     expect(afterSecondSkip.skippedPlayers).toEqual([]);
+    expect(afterSecondSkip.lastEvent).toEqual({ type: "skip", playerId: "player-c" });
   });
 });
 

@@ -122,7 +122,8 @@ button {
 }
 
 .bomb-callout,
-.winner-callout {
+.winner-callout,
+.pass-callout {
   position: absolute;
   inset-block-start: 0.75rem;
   inset-inline-start: 50%;
@@ -151,6 +152,14 @@ button {
   background: #74d79c;
   font-size: clamp(2rem, 7vw, 4.8rem);
   line-height: 0.95;
+}
+
+.pass-callout {
+  inset-block-start: 3.9rem;
+  padding: 0.45rem 0.8rem;
+  background: #ffffff;
+  color: #3e4856;
+  font-size: 1rem;
 }
 
 .discard-zone,
