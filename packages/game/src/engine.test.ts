@@ -29,6 +29,16 @@ function startedGame(count = 3): GameState {
   );
 }
 
+function playerHoldingCard(state: GameState, cardId: CardId): string {
+  const player = Object.entries(state.hands).find((entry) => entry[1].some((nextCard) => nextCard.id === cardId));
+
+  if (player === undefined) {
+    throw new Error(`No player holds ${cardId}`);
+  }
+
+  return player[0];
+}
+
 function card(id: CardId): Card {
   const found = createDeck().find((nextCard) => nextCard.id === id);
 
@@ -126,14 +136,19 @@ describe("valid play detection", () => {
 describe("VC play rules", () => {
   it("allows same-rank doubles, triples, and quads", () => {
     const state = playingStateWithHands({
-      "player-a": [card("spades-6"), card("clubs-6"), card("diamonds-6"), card("hearts-6")],
+      "player-a": [card("spades-3"), card("spades-6"), card("clubs-6"), card("diamonds-6"), card("hearts-6")],
       "player-b": [],
       "player-c": []
     });
 
-    expect(validatePlay(state, "player-a", ["spades-6", "clubs-6"]).ok).toBe(true);
-    expect(validatePlay(state, "player-a", ["spades-6", "clubs-6", "diamonds-6"]).ok).toBe(true);
-    expect(validatePlay(state, "player-a", ["spades-6", "clubs-6", "diamonds-6", "hearts-6"]).ok).toBe(true);
+    const afterOpening = assertValidTransition(
+      reduceGameAction(state, { type: "play-cards", actorId: "player-a", cardIds: ["spades-3"] })
+    );
+    const nextState = { ...afterOpening, currentTurn: "player-a", currentLeadingPlay: null };
+
+    expect(validatePlay(nextState, "player-a", ["spades-6", "clubs-6"]).ok).toBe(true);
+    expect(validatePlay(nextState, "player-a", ["spades-6", "clubs-6", "diamonds-6"]).ok).toBe(true);
+    expect(validatePlay(nextState, "player-a", ["spades-6", "clubs-6", "diamonds-6", "hearts-6"]).ok).toBe(true);
   });
 
   it("allows straights of three or more consecutive ranks", () => {
@@ -149,13 +164,29 @@ describe("VC play rules", () => {
 
   it("rejects mixed-rank sets and broken straights", () => {
     const state = playingStateWithHands({
-      "player-a": [card("spades-6"), card("clubs-6"), card("diamonds-7"), card("hearts-9")],
+      "player-a": [card("spades-3"), card("spades-6"), card("clubs-6"), card("diamonds-7"), card("hearts-9")],
+      "player-b": [],
+      "player-c": []
+    });
+    const stateAfterOpening = {
+      ...state,
+      discardPile: [{ playerId: "player-b", cards: [card("spades-3")] }]
+    };
+
+    expect(validatePlay(stateAfterOpening, "player-a", ["spades-6", "diamonds-7"]).ok).toBe(false);
+    expect(validatePlay(stateAfterOpening, "player-a", ["spades-6", "diamonds-7", "hearts-9"]).ok).toBe(false);
+  });
+
+  it("requires the first play to include the 3 of spades", () => {
+    const state = playingStateWithHands({
+      "player-a": [card("spades-3"), card("clubs-4"), card("diamonds-5"), card("hearts-6")],
       "player-b": [],
       "player-c": []
     });
 
-    expect(validatePlay(state, "player-a", ["spades-6", "diamonds-7"]).ok).toBe(false);
-    expect(validatePlay(state, "player-a", ["spades-6", "diamonds-7", "hearts-9"]).ok).toBe(false);
+    expect(validatePlay(state, "player-a", ["clubs-4"]).ok).toBe(false);
+    expect(validatePlay(state, "player-a", ["spades-3"]).ok).toBe(true);
+    expect(validatePlay(state, "player-a", ["spades-3", "clubs-4", "diamonds-5"]).ok).toBe(true);
   });
 
   it("requires the same format as the leading play", () => {
@@ -277,26 +308,43 @@ describe("invalid play rejection", () => {
 });
 
 describe("turn advancement", () => {
+  it("starts with the player holding the 3 of spades", () => {
+    const state = startedGame();
+
+    expect(state.currentTurn).toBe(playerHoldingCard(state, "spades-3"));
+  });
+
   it("advances to the next deterministic player after a play", () => {
     const state = startedGame();
-    const card = state.hands["player-a"]?.[0];
+    const actorId = state.currentTurn ?? "";
+    const card = state.hands[actorId]?.find((nextCard) => nextCard.id === "spades-3");
 
     expect(card).toBeDefined();
 
     const result = reduceGameAction(state, {
       type: "play-cards",
-      actorId: "player-a",
+      actorId,
       cardIds: card === undefined ? [] : [card.id]
     });
+    const actorIndex = state.turnOrder.indexOf(actorId);
+    const expectedNextTurn = state.turnOrder[(actorIndex + 1) % state.turnOrder.length];
 
-    expect(result.state.currentTurn).toBe("player-b");
+    expect(result.state.currentTurn).toBe(expectedNextTurn);
   });
 });
 
 describe("skip/reset logic", () => {
   it("returns turn to the last player who played when everyone else skips", () => {
-    const initialState = startedGame();
-    const firstCard = initialState.hands["player-a"]?.[0];
+    const started = startedGame();
+    const initialState: GameState = {
+      ...started,
+      currentTurn: "player-a",
+      hands: {
+        ...started.hands,
+        "player-a": [card("spades-3"), ...(started.hands["player-a"] ?? [])]
+      }
+    };
+    const firstCard = initialState.hands["player-a"]?.find((nextCard) => nextCard.id === "spades-3");
 
     expect(firstCard).toBeDefined();
 

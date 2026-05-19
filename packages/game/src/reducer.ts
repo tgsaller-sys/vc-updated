@@ -22,6 +22,16 @@ function removeCardsFromHand(hand: readonly Card[], playedCards: readonly Card[]
   return hand.filter((card) => !playedIds.has(card.id));
 }
 
+function findPlayerWithCard(hands: Readonly<Record<string, readonly Card[]>>, cardId: string): string | null {
+  for (const [playerId, hand] of Object.entries(hands)) {
+    if (hand.some((card) => card.id === cardId)) {
+      return playerId;
+    }
+  }
+
+  return null;
+}
+
 /**
  * Applies one player action to immutable game state after validating it.
  * This is the authoritative transition function used by UI and server sync code.
@@ -71,6 +81,7 @@ export function reduceGameAction(
 
       const turnOrder = state.players.map((player) => player.id);
       const dealt = dealEqually(turnOrder, createShuffledDeck(action.seed));
+      const startingPlayerId = findPlayerWithCard(dealt.hands, "spades-3");
 
       return {
         state: bumpVersion({
@@ -78,7 +89,7 @@ export function reduceGameAction(
           phase: "playing",
           hands: dealt.hands,
           deck: dealt.remainder,
-          currentTurn: turnOrder[0] ?? null,
+          currentTurn: startingPlayerId,
           currentLeadingPlay: null,
           skippedPlayers: [],
           turnOrder

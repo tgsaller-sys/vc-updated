@@ -105,6 +105,14 @@ export const validateVcPlay: RuleValidator = (state, _actorId, cards) => {
     };
   }
 
+  if (
+    state.discardPile.length === 0 &&
+    state.currentLeadingPlay === null &&
+    !cards.some((card) => card.id === "spades-3")
+  ) {
+    return { ok: false, reason: "The first play must include the 3 of spades." };
+  }
+
   if (state.currentLeadingPlay === null) {
     return { ok: true };
   }
