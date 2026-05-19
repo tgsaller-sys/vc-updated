@@ -23,8 +23,6 @@ import { supabaseConfig } from "./supabase/client";
 import { useUiStore } from "./store/uiStore";
 import { buildHead } from "./buildInfo";
 
-const buildLabel = "discard-sort-ui";
-
 function applyAction(state: GameState, action: GameAction): GameState {
   const result = reduceGameAction(state, action);
 
@@ -83,7 +81,6 @@ export function App() {
   const error = useUiStore((state) => state.error);
   const setError = useUiStore((state) => state.setError);
   const [authStatus, setAuthStatus] = useState<"checking" | "anonymous" | "local">("checking");
-  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [syncMode, setSyncMode] = useState<"local" | "remote">("local");
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const preferredPlayerName = playerName.trim() || `Player ${localPlayerId.slice(0, 4)}`;
@@ -98,6 +95,10 @@ export function App() {
   );
   const isActiveTurn = game.currentTurn === activePlayerId;
   const isRemoteLobby = syncMode === "remote";
+  const currentTurnName =
+    game.currentTurn === null
+      ? "Waiting"
+      : (game.players.find((player) => player.id === game.currentTurn)?.name ?? "Unknown player");
   const lobbyStatus =
     !supabaseConfig.hasUrl || !supabaseConfig.hasAnonKey
       ? "Supabase env vars missing in this deployment"
@@ -108,7 +109,22 @@ export function App() {
           : syncMode === "local"
             ? "Local demo"
             : `Connected to lobby ${lobbyCode}`;
-  const hasSupabaseConfig = supabaseConfig.hasUrl && supabaseConfig.hasAnonKey;
+  const connectionLabel =
+    !supabaseConfig.hasUrl || !supabaseConfig.hasAnonKey
+      ? "Setup needed"
+      : authStatus === "checking"
+        ? "Connecting"
+        : syncMode === "remote"
+          ? "Online"
+          : "Local";
+  const turnLabel =
+    game.phase === "lobby"
+      ? "Waiting to start"
+      : game.phase === "finished"
+        ? "Game finished"
+        : isActiveTurn
+          ? "Your turn"
+          : `${currentTurnName}'s turn`;
   const selectedCards = useMemo(
     () => sortedActiveHand.filter((card) => selectedCardIds.includes(card.id)),
     [selectedCardIds, sortedActiveHand]
@@ -125,13 +141,12 @@ export function App() {
 
     async function authenticate() {
       try {
-        const userId = await signInAnonymously();
+        await signInAnonymously();
 
         if (cancelled) {
           return;
         }
 
-        setAuthUserId(userId);
         setAuthStatus("anonymous");
         setError(null);
       } catch (caught) {
@@ -277,14 +292,13 @@ export function App() {
             <p className="lobby-status">{lobbyStatus}</p>
           </div>
           <div className="status-cluster" aria-label="Game status">
-            <span>{hasSupabaseConfig ? "Supabase env OK" : "Supabase env missing"}</span>
-            <span>{buildLabel}</span>
-            <span>{authStatus === "anonymous" ? "Anonymous" : authStatus === "checking" ? "Signing in" : "Local"}</span>
-            <span>{syncMode}</span>
-            <span>You {localPlayerId.slice(0, 4)}</span>
-            {authUserId !== null ? <span>Auth {authUserId.slice(0, 4)}</span> : null}
+            <span>{connectionLabel}</span>
+            <span>{isRemoteLobby ? `Lobby ${lobbyCode}` : "Demo table"}</span>
+            <span>
+              {game.players.length} player{game.players.length === 1 ? "" : "s"}
+            </span>
+            <span>{turnLabel}</span>
             <span>{game.phase}</span>
-            <span>Turn {game.currentTurn ?? "waiting"}</span>
           </div>
         </header>
 
