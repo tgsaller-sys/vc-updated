@@ -67,6 +67,38 @@ function straightHighRank(cards: readonly Card[]): Card["rank"] | null {
   return sorted[sorted.length - 1]?.rank ?? null;
 }
 
+function doubleStraightHighCard(cards: readonly Card[]): Card | null {
+  if (cards.length < 6 || cards.length % 2 !== 0 || cards.some((card) => card.rank === "2")) {
+    return null;
+  }
+
+  const byRank = new Map<Card["rank"], readonly Card[]>();
+
+  for (const card of cards) {
+    byRank.set(
+      card.rank,
+      [...(byRank.get(card.rank) ?? []), card].sort(compareCardsForPlay)
+    );
+  }
+
+  if ([...byRank.values()].some((rankCards) => rankCards.length !== 2)) {
+    return null;
+  }
+
+  const rankValues = [...byRank.keys()].map(rankValue).sort((left, right) => left - right);
+
+  for (let index = 1; index < rankValues.length; index += 1) {
+    const previous = rankValues[index - 1];
+    const current = rankValues[index];
+
+    if (previous === undefined || current === undefined || current !== previous + 1) {
+      return null;
+    }
+  }
+
+  return highestCardForPlay(cards);
+}
+
 export function identifyPlayShape(cards: readonly Card[]): PlayShape | null {
   if (cards.length === 0) {
     return null;
@@ -106,11 +138,35 @@ export function identifyPlayShape(cards: readonly Card[]): PlayShape | null {
     };
   }
 
+  const highDoubleStraightCard = doubleStraightHighCard(cards);
+
+  if (highDoubleStraightCard !== null) {
+    return {
+      kind: "double-straight-bomb",
+      length: cards.length,
+      highRank: highDoubleStraightCard.rank,
+      highCard: highDoubleStraightCard
+    };
+  }
+
   return null;
 }
 
 function playShapeForPlayedSet(playedSet: PlayedSet): PlayShape | null {
   return identifyPlayShape(playedSet.cards);
+}
+
+export function isBombShape(shape: PlayShape): boolean {
+  return shape.kind === "quad" || shape.kind === "double-straight-bomb";
+}
+
+export function isBombPlay(cards: readonly Card[]): boolean {
+  const shape = identifyPlayShape(cards);
+  return shape !== null && isBombShape(shape);
+}
+
+function isSingleTwo(shape: PlayShape): boolean {
+  return shape.kind === "single" && shape.highCard.rank === "2";
 }
 
 export const validateVcPlay: RuleValidator = (state, _actorId, cards) => {
@@ -132,6 +188,10 @@ export const validateVcPlay: RuleValidator = (state, _actorId, cards) => {
   }
 
   if (state.currentLeadingPlay === null) {
+    if (nextShape.kind === "double-straight-bomb") {
+      return { ok: false, reason: "A double-straight bomb can only be played on a single 2." };
+    }
+
     return { ok: true };
   }
 
@@ -139,6 +199,14 @@ export const validateVcPlay: RuleValidator = (state, _actorId, cards) => {
 
   if (leadingShape === null) {
     return { ok: false, reason: "The current leading play has an invalid shape." };
+  }
+
+  if (isSingleTwo(leadingShape) && isBombShape(nextShape)) {
+    return { ok: true };
+  }
+
+  if (nextShape.kind === "double-straight-bomb" && leadingShape.kind !== "double-straight-bomb") {
+    return { ok: false, reason: "A double-straight bomb can only be played on a single 2." };
   }
 
   if (nextShape.kind !== leadingShape.kind || nextShape.length !== leadingShape.length) {

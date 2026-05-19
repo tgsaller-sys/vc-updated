@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Play, RotateCcw, Send, SkipForward, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { CardView } from "@vc/ui";
-import { reduceGameAction, sortCardsForPlay, type GameAction, type GameState } from "@vc/game";
+import { isBombPlay, reduceGameAction, sortCardsForPlay, type GameAction, type GameState } from "@vc/game";
 import { createDemoGame, createLobbyGame, createPlayer } from "./lib/localGame";
 import { createLobbyCode } from "./lib/lobbyCode";
 import {
@@ -63,6 +63,8 @@ export function App() {
     () => sortedActiveHand.filter((card) => selectedCardIds.includes(card.id)),
     [selectedCardIds, sortedActiveHand]
   );
+  const showBombCallout =
+    game.currentLeadingPlay !== null && isBombPlay(game.currentLeadingPlay.cards) && game.currentLeadingPlay.cards.length > 1;
 
   useEffect(() => {
     let cancelled = false;
@@ -263,6 +265,18 @@ export function App() {
         ) : null}
 
         <section className="center-table" aria-label="Discard pile">
+          <AnimatePresence>
+            {showBombCallout ? (
+              <motion.div
+                className="bomb-callout"
+                initial={{ opacity: 0, scale: 0.76, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+              >
+                BOMB!
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
           <div className="discard-zone">
             <AnimatePresence mode="popLayout">
               {game.currentLeadingPlay === null ? (

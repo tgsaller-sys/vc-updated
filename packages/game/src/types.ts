@@ -37,7 +37,7 @@ export interface PlayedSet {
   readonly cards: readonly Card[];
 }
 
-export type PlayKind = "single" | "double" | "triple" | "quad" | "straight";
+export type PlayKind = "single" | "double" | "triple" | "quad" | "straight" | "double-straight-bomb";
 
 export interface PlayShape {
   readonly kind: PlayKind;

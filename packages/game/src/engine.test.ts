@@ -293,6 +293,72 @@ describe("VC play rules", () => {
 
     expect(validatePlay(state, "player-a", ["spades-4", "spades-5", "clubs-6"]).ok).toBe(true);
   });
+
+  it("allows a quad bomb to be played on a single 2", () => {
+    const state: GameState = {
+      ...playingStateWithHands({
+        "player-a": [card("spades-4"), card("clubs-4"), card("diamonds-4"), card("hearts-4")],
+        "player-b": [],
+        "player-c": []
+      }),
+      currentLeadingPlay: {
+        playerId: "player-b",
+        cards: [card("spades-2")]
+      }
+    };
+
+    expect(validatePlay(state, "player-a", ["spades-4", "clubs-4", "diamonds-4", "hearts-4"]).ok).toBe(true);
+  });
+
+  it("allows a double-straight bomb to be played on a single 2", () => {
+    const state: GameState = {
+      ...playingStateWithHands({
+        "player-a": [
+          card("spades-4"),
+          card("clubs-4"),
+          card("spades-5"),
+          card("clubs-5"),
+          card("spades-6"),
+          card("clubs-6")
+        ],
+        "player-b": [],
+        "player-c": []
+      }),
+      currentLeadingPlay: {
+        playerId: "player-b",
+        cards: [card("hearts-2")]
+      }
+    };
+
+    expect(
+      validatePlay(state, "player-a", ["spades-4", "clubs-4", "spades-5", "clubs-5", "spades-6", "clubs-6"]).ok
+    ).toBe(true);
+  });
+
+  it("rejects double-straight bombs when the leading play is not a single 2", () => {
+    const state: GameState = {
+      ...playingStateWithHands({
+        "player-a": [
+          card("spades-4"),
+          card("clubs-4"),
+          card("spades-5"),
+          card("clubs-5"),
+          card("spades-6"),
+          card("clubs-6")
+        ],
+        "player-b": [],
+        "player-c": []
+      }),
+      currentLeadingPlay: {
+        playerId: "player-b",
+        cards: [card("hearts-A")]
+      }
+    };
+
+    expect(
+      validatePlay(state, "player-a", ["spades-4", "clubs-4", "spades-5", "clubs-5", "spades-6", "clubs-6"]).ok
+    ).toBe(false);
+  });
 });
 
 describe("invalid play rejection", () => {
