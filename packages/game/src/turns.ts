@@ -12,6 +12,30 @@ export function nextPlayerId(turnOrder: readonly PlayerId[], currentPlayerId: Pl
   return next;
 }
 
+export function nextEligiblePlayerId(
+  turnOrder: readonly PlayerId[],
+  currentPlayerId: PlayerId,
+  skippedPlayers: readonly PlayerId[]
+): PlayerId {
+  if (turnOrder.length === 0) {
+    throw new Error("Cannot advance turn without players.");
+  }
+
+  let next = nextPlayerId(turnOrder, currentPlayerId);
+
+  for (const playerId of turnOrder) {
+    void playerId;
+
+    if (!skippedPlayers.includes(next)) {
+      return next;
+    }
+
+    next = nextPlayerId(turnOrder, next);
+  }
+
+  return currentPlayerId;
+}
+
 export function allOtherPlayersSkipped(
   turnOrder: readonly PlayerId[],
   lastPlayerToPlay: PlayerId,

@@ -234,6 +234,10 @@ export function validatePlay(
     return { ok: false, reason: "It is not this player's turn." };
   }
 
+  if (state.skippedPlayers.includes(actorId)) {
+    return { ok: false, reason: "This player skipped and cannot play again until the hand resets." };
+  }
+
   if (new Set(cardIds).size !== cardIds.length) {
     return { ok: false, reason: "A card cannot be played twice." };
   }

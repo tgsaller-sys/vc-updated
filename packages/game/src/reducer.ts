@@ -1,5 +1,5 @@
 import { createShuffledDeck, dealEqually } from "./deck";
-import { allOtherPlayersSkipped, nextPlayerId } from "./turns";
+import { allOtherPlayersSkipped, nextEligiblePlayerId, nextPlayerId } from "./turns";
 import { setPlayerConnection, upsertPlayer } from "./state";
 import { validatePlay, validateSkip } from "./rules";
 import type { Card, GameAction, GameState, RuleValidator, ValidationResult } from "./types";
@@ -114,8 +114,8 @@ export function reduceGameAction(
         hands: nextHands,
         discardPile: [...state.discardPile, { playerId: action.actorId, cards: validation.cards }],
         currentLeadingPlay: { playerId: action.actorId, cards: validation.cards },
-        skippedPlayers: [],
-        currentTurn: nextPlayerId(state.turnOrder, action.actorId),
+        skippedPlayers: state.skippedPlayers,
+        currentTurn: nextEligiblePlayerId(state.turnOrder, action.actorId, state.skippedPlayers),
         phase: nextHands[action.actorId]?.length === 0 ? "finished" : state.phase,
         winnerId: nextHands[action.actorId]?.length === 0 ? action.actorId : state.winnerId
       };

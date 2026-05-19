@@ -447,6 +447,63 @@ describe("turn advancement", () => {
 });
 
 describe("skip/reset logic", () => {
+  it("prevents skipped players from playing again until the hand resets", () => {
+    const initialState = playingStateWithHands({
+      "player-a": [
+        card("spades-5"),
+        card("clubs-5"),
+        card("diamonds-5"),
+        card("spades-7"),
+        card("clubs-7"),
+        card("diamonds-7")
+      ],
+      "player-b": [card("spades-8"), card("clubs-8"), card("diamonds-8")],
+      "player-c": [card("spades-6"), card("clubs-6"), card("diamonds-6"), card("spades-9")]
+    });
+    const stateAfterOpening = {
+      ...initialState,
+      discardPile: [{ playerId: "player-c", cards: [card("spades-3")] }]
+    };
+
+    const afterPlayerOne = assertValidTransition(
+      reduceGameAction(stateAfterOpening, {
+        type: "play-cards",
+        actorId: "player-a",
+        cardIds: ["spades-5", "clubs-5", "diamonds-5"]
+      })
+    );
+    const afterPlayerTwoSkip = assertValidTransition(
+      reduceGameAction(afterPlayerOne, { type: "skip", actorId: "player-b" })
+    );
+    const afterPlayerThree = assertValidTransition(
+      reduceGameAction(afterPlayerTwoSkip, {
+        type: "play-cards",
+        actorId: "player-c",
+        cardIds: ["spades-6", "clubs-6", "diamonds-6"]
+      })
+    );
+    const afterPlayerOneRaises = assertValidTransition(
+      reduceGameAction(afterPlayerThree, {
+        type: "play-cards",
+        actorId: "player-a",
+        cardIds: ["spades-7", "clubs-7", "diamonds-7"]
+      })
+    );
+
+    expect(afterPlayerOneRaises.currentTurn).toBe("player-c");
+    expect(afterPlayerOneRaises.skippedPlayers).toEqual(["player-b"]);
+    expect(
+      reduceGameAction(
+        { ...afterPlayerOneRaises, currentTurn: "player-b" },
+        {
+          type: "play-cards",
+          actorId: "player-b",
+          cardIds: ["spades-8", "clubs-8", "diamonds-8"]
+        }
+      ).validation.ok
+    ).toBe(false);
+  });
+
   it("returns turn to the last player who played when everyone else skips", () => {
     const started = startedGame();
     const initialState: GameState = {
