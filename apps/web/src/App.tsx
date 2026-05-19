@@ -133,6 +133,7 @@ export function App() {
   );
   const showBombCallout =
     game.currentLeadingPlay !== null && isBombPlay(game.currentLeadingPlay.cards) && game.currentLeadingPlay.cards.length > 1;
+  const visibleDiscardPlay = game.currentLeadingPlay ?? game.discardPile.at(-1) ?? null;
   const winnerName =
     game.winnerId === null
       ? null
@@ -404,7 +405,7 @@ export function App() {
 
             <div className="discard-zone" aria-label="Discard pile">
               <AnimatePresence mode="popLayout">
-                {game.currentLeadingPlay === null ? (
+                {visibleDiscardPlay === null ? (
                   <motion.div
                     layout
                     key="empty-discard"
@@ -416,7 +417,7 @@ export function App() {
                     Discard pile
                   </motion.div>
                 ) : (
-                  game.currentLeadingPlay.cards.map((card) => (
+                  visibleDiscardPlay.cards.map((card) => (
                     <motion.div
                       layout
                       key={card.id}
