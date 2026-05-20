@@ -86,3 +86,11 @@
 .vc-card-glyph-diamonds .vc-card-glyph-highlight {
   fill: rgb(255 255 255 / 0.55);
 }
+
+@media (max-width: 680px) {
+  .vc-card {
+    inline-size: clamp(3.65rem, 18vw, 4.65rem);
+    border-radius: 8px;
+    filter: drop-shadow(0 8px 12px rgb(20 26 35 / 0.18));
+  }
+}

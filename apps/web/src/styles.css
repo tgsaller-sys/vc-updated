@@ -377,20 +377,210 @@ button {
 }
 
 @media (max-width: 680px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .app-shell {
+    padding: 0.55rem;
+  }
+
+  .tabletop {
+    grid-template-rows: auto auto auto auto;
+    gap: 0.55rem;
+    min-block-size: auto;
+    overflow: visible;
+  }
+
   .top-bar {
     align-items: start;
-    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .top-bar h1 {
+    font-size: 2.25rem;
+  }
+
+  .eyebrow {
+    margin-block-end: 0.15rem;
+    font-size: 0.66rem;
+  }
+
+  .build-head {
+    display: none;
+  }
+
+  .lobby-status {
+    margin-block-start: 0.25rem;
+    font-size: 0.82rem;
   }
 
   .status-cluster {
     justify-content: start;
+    gap: 0.35rem;
+  }
+
+  .status-cluster span {
+    padding: 0.38rem 0.5rem;
+    font-size: 0.78rem;
+  }
+
+  .players-strip {
+    gap: 0.45rem;
+    padding-block: 0;
+  }
+
+  .player-pill {
+    min-inline-size: 7.5rem;
+    padding: 0.45rem 0.55rem;
+    font-size: 0.82rem;
+  }
+
+  .lobby-controls {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+  }
+
+  .lobby-controls button,
+  .lobby-controls input,
+  .max-cards-control,
+  .seed-control {
+    inline-size: 100%;
+    min-block-size: 2.35rem;
+    padding: 0.45rem 0.55rem;
+    font-size: 0.82rem;
+  }
+
+  .lobby-controls .player-name-input,
+  .lobby-controls .lobby-code-input,
+  .seed-control input {
+    inline-size: 100%;
+  }
+
+  .max-cards-control input {
+    inline-size: 3.4rem;
+  }
+
+  .center-table {
+    padding: 0.5rem 0;
+    min-block-size: 15.5rem;
+  }
+
+  .bomb-callout,
+  .turn-callout {
+    max-inline-size: calc(100vw - 1.4rem);
+    padding: 0.28rem 0.55rem;
+    font-size: 1rem;
+  }
+
+  .pass-callout {
+    inset-block-start: 3rem;
+    max-inline-size: calc(100vw - 1.4rem);
+    padding: 0.32rem 0.55rem;
+    font-size: 0.84rem;
+  }
+
+  .winner-callout {
+    max-inline-size: calc(100vw - 1.4rem);
+    font-size: 2rem;
   }
 
   .table-focus {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
   }
 
   .opponents-panel {
-    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    display: flex;
+    order: 0;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.15rem 0.2rem 0.35rem;
+  }
+
+  .opponent-hand {
+    flex: 0 0 8.8rem;
+    gap: 0.28rem;
+    min-block-size: 3.6rem;
+    padding: 0.45rem;
+  }
+
+  .opponent-meta {
+    font-size: 0.78rem;
+  }
+
+  .opponent-card-row {
+    min-block-size: 1.65rem;
+    padding-inline: 0.15rem;
+  }
+
+  .opponent-card-back {
+    inline-size: 1rem;
+    border-radius: 3px;
+  }
+
+  .opponent-card-back + .opponent-card-back {
+    margin-inline-start: -0.45rem;
+  }
+
+  .opponent-state {
+    font-size: 0.66rem;
+  }
+
+  .discard-zone {
+    order: 1;
+    min-block-size: 7.2rem;
+    overflow-x: auto;
+    padding-inline: 0.4rem;
+  }
+
+  .discard-zone > * + * {
+    margin-inline-start: -1.7rem;
+  }
+
+  .discard-placeholder {
+    inline-size: 4.1rem;
+    font-size: 0.76rem;
+  }
+
+  .hand-panel {
+    gap: 0.4rem;
+  }
+
+  .hand-actions {
+    position: sticky;
+    z-index: 3;
+    inset-block-end: 0;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    padding: 0.45rem;
+    border: 1px solid rgb(23 32 47 / 0.12);
+    border-radius: 8px;
+    background: rgb(247 243 236 / 0.94);
+    backdrop-filter: blur(8px);
+  }
+
+  .hand-actions button {
+    min-block-size: 2.35rem;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.84rem;
+  }
+
+  .hand {
+    min-block-size: 7.5rem;
+    padding-block: 1rem 0.35rem;
+  }
+
+  .hand > * + * {
+    margin-inline-start: -2.05rem;
+  }
+
+  .notice-text,
+  .error-text,
+  .winner-text {
+    font-size: 0.84rem;
   }
 }
