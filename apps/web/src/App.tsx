@@ -23,6 +23,8 @@ import { supabaseConfig } from "./supabase/client";
 import { useUiStore } from "./store/uiStore";
 import { buildHead } from "./buildInfo";
 
+const maxSeed = 4294967295;
+
 function applyAction(state: GameState, action: GameAction): GameState {
   const result = reduceGameAction(state, action);
 
@@ -49,6 +51,28 @@ function pickSkipLabel(): string {
   }
 
   return "Knucle-rap";
+}
+
+function createRandomSeed(): number {
+  const values = new Uint32Array(1);
+  window.crypto.getRandomValues(values);
+  return values[0] ?? 0;
+}
+
+function parseSeed(seedText: string): number | null {
+  const trimmedSeed = seedText.trim();
+
+  if (trimmedSeed.length === 0) {
+    return null;
+  }
+
+  const seed = Number(trimmedSeed);
+
+  if (!Number.isInteger(seed) || seed < 0 || seed > maxSeed) {
+    throw new Error(`Seed must be a whole number from 0 to ${maxSeed}.`);
+  }
+
+  return seed;
 }
 
 interface OpponentHandProps {
@@ -93,6 +117,8 @@ export function App() {
   const setPlayerName = useUiStore((state) => state.setPlayerName);
   const maxCardsPerPlayer = useUiStore((state) => state.maxCardsPerPlayer);
   const setMaxCardsPerPlayer = useUiStore((state) => state.setMaxCardsPerPlayer);
+  const gameSeed = useUiStore((state) => state.gameSeed);
+  const setGameSeed = useUiStore((state) => state.setGameSeed);
   const lobbyCode = useUiStore((state) => state.lobbyCode);
   const setLobbyCode = useUiStore((state) => state.setLobbyCode);
   const selectedCardIds = useUiStore((state) => state.selectedCardIds);
@@ -260,7 +286,16 @@ export function App() {
   }
 
   function startGame() {
-    void dispatch({ type: "start", actorId: activePlayerId, seed: Date.now(), maxCardsPerPlayer });
+    try {
+      void dispatch({
+        type: "start",
+        actorId: activePlayerId,
+        seed: parseSeed(gameSeed) ?? createRandomSeed(),
+        maxCardsPerPlayer
+      });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Invalid seed.");
+    }
   }
 
   function savePlayerName() {
@@ -433,6 +468,19 @@ export function App() {
                 value={maxCardsPerPlayer}
                 onChange={(event) => setMaxCardsPerPlayer(event.currentTarget.valueAsNumber)}
                 aria-label="Maximum cards per player"
+              />
+            </label>
+            <label className="seed-control">
+              <span>Seed</span>
+              <input
+                type="number"
+                min={0}
+                max={maxSeed}
+                step={1}
+                value={gameSeed}
+                onChange={(event) => setGameSeed(event.currentTarget.value)}
+                placeholder="Random"
+                aria-label="Random seed"
               />
             </label>
           </section>

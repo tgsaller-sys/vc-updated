@@ -286,7 +286,8 @@ button {
 .hand-actions button,
 .lobby-controls button,
 .lobby-controls input,
-.max-cards-control {
+.max-cards-control,
+.seed-control {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -301,6 +302,11 @@ button {
 }
 
 .max-cards-control {
+  gap: 0.5rem;
+  background: rgb(255 255 255 / 0.72);
+}
+
+.seed-control {
   gap: 0.5rem;
   background: rgb(255 255 255 / 0.72);
 }
@@ -323,12 +329,17 @@ button {
   text-transform: uppercase;
 }
 
-.max-cards-control input {
+.max-cards-control input,
+.seed-control input {
   min-block-size: auto;
   inline-size: 4.4rem;
   border: 0;
   padding: 0;
   background: transparent;
+}
+
+.seed-control input {
+  inline-size: 7.5rem;
 }
 
 .hand-actions button:disabled {

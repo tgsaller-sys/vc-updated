@@ -87,6 +87,18 @@ describe("shuffling", () => {
   });
 });
 
+describe("start options", () => {
+  it("rejects seeds outside the unsigned 32-bit range", () => {
+    const result = reduceGameAction(lobbyWithPlayers(2), {
+      type: "start",
+      actorId: "player-a",
+      seed: 4294967296
+    });
+
+    expect(result.validation.ok).toBe(false);
+  });
+});
+
 describe("dealing", () => {
   it("deals equally and leaves the remainder in the deck", () => {
     const result = dealEqually(["a", "b", "c"], createDeck());

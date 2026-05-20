@@ -5,6 +5,8 @@ import { setPlayerConnection, upsertPlayer } from "./state";
 import { validatePlay, validateSkip } from "./rules";
 import type { Card, GameAction, GameState, RuleValidator, ValidationResult } from "./types";
 
+const maxSeed = 4294967295;
+
 export interface TransitionResult {
   readonly state: GameState;
   readonly validation: ValidationResult;
@@ -60,6 +62,14 @@ function validateMaxCardsPerPlayer(maxCardsPerPlayer: number | undefined): Valid
   return { ok: true };
 }
 
+function validateSeed(seed: number): ValidationResult {
+  if (!Number.isInteger(seed) || seed < 0 || seed > maxSeed) {
+    return { ok: false, reason: `Seed must be a whole number from 0 to ${maxSeed}.` };
+  }
+
+  return { ok: true };
+}
+
 /**
  * Applies one player action to immutable game state after validating it.
  * This is the authoritative transition function used by UI and server sync code.
@@ -105,6 +115,12 @@ export function reduceGameAction(
 
       if (!state.players.some((player) => player.id === action.actorId)) {
         return { state, validation: { ok: false, reason: "Only a joined player can start the game." } };
+      }
+
+      const seedValidation = validateSeed(action.seed);
+
+      if (!seedValidation.ok) {
+        return { state, validation: seedValidation };
       }
 
       const maxCardsValidation = validateMaxCardsPerPlayer(action.maxCardsPerPlayer);

@@ -9,11 +9,13 @@ interface UiState {
   readonly localPlayerId: PlayerId;
   readonly playerName: string;
   readonly maxCardsPerPlayer: number;
+  readonly gameSeed: string;
   readonly selectedCardIds: readonly CardId[];
   readonly lobbyCode: string;
   readonly error: string | null;
   readonly setPlayerName: (playerName: string) => void;
   readonly setMaxCardsPerPlayer: (maxCardsPerPlayer: number) => void;
+  readonly setGameSeed: (gameSeed: string) => void;
   readonly setLobbyCode: (lobbyCode: string) => void;
   readonly toggleCard: (cardId: CardId) => void;
   readonly clearSelection: () => void;
@@ -56,6 +58,7 @@ export const useUiStore = create<UiState>((set) => ({
   localPlayerId: createLocalPlayerId(),
   playerName: createInitialPlayerName(),
   maxCardsPerPlayer: createInitialMaxCardsPerPlayer(),
+  gameSeed: "",
   selectedCardIds: [],
   lobbyCode: "",
   error: null,
@@ -68,6 +71,7 @@ export const useUiStore = create<UiState>((set) => ({
     window.localStorage.setItem("vc.maxCardsPerPlayer", String(nextMaxCardsPerPlayer));
     set({ maxCardsPerPlayer: nextMaxCardsPerPlayer });
   },
+  setGameSeed: (gameSeed) => set({ gameSeed }),
   setLobbyCode: (lobbyCode) => set({ lobbyCode: lobbyCode.toUpperCase() }),
   toggleCard: (cardId) =>
     set((state) => ({
