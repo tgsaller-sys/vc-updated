@@ -296,10 +296,25 @@ export function App() {
       }
 
       const remoteGame = await getRemoteGameByLobbyCode(nextCode);
-      const joinedGame = await dispatchValidatedRemoteAction(remoteGame, {
-        type: "join",
-        player: createPlayer(localPlayerId, preferredPlayerName)
-      });
+      const existingPlayer = remoteGame.players.find((player) => player.id === localPlayerId);
+
+      if (remoteGame.phase !== "lobby" && existingPlayer === undefined) {
+        throw new Error("This game has already started. Rejoin from the same browser that created your seat.");
+      }
+
+      const joinedGame = await dispatchValidatedRemoteAction(
+        remoteGame,
+        existingPlayer === undefined
+          ? {
+              type: "join",
+              player: createPlayer(localPlayerId, preferredPlayerName)
+            }
+          : {
+              type: "set-connection",
+              playerId: localPlayerId,
+              connected: true
+            }
+      );
       setSyncMode("remote");
       setGame(joinedGame);
       setActionStatus(null);

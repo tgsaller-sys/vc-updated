@@ -484,6 +484,19 @@ describe("turn advancement", () => {
     expect(state.currentTurn).toBe(playerHoldingCard(state, "spades-3"));
   });
 
+  it("allows a player connection to be restored after the game starts", () => {
+    const state = {
+      ...startedGame(),
+      players: players.map((player) => (player.id === "player-b" ? { ...player, connected: false } : player))
+    };
+    const result = assertValidTransition(
+      reduceGameAction(state, { type: "set-connection", playerId: "player-b", connected: true })
+    );
+
+    expect(result.players.find((player) => player.id === "player-b")?.connected).toBe(true);
+    expect(result.phase).toBe("playing");
+  });
+
   it("advances to the next deterministic player after a play", () => {
     const state = startedGame();
     const actorId = state.currentTurn ?? "";

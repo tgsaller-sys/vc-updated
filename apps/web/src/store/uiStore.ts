@@ -17,14 +17,15 @@ interface UiState {
 }
 
 function createLocalPlayerId(): PlayerId {
-  const existing = window.sessionStorage.getItem("vc.localPlayerId");
+  const existing = window.localStorage.getItem("vc.localPlayerId") ?? window.sessionStorage.getItem("vc.localPlayerId");
 
   if (existing !== null) {
+    window.localStorage.setItem("vc.localPlayerId", existing);
     return existing;
   }
 
   const next = window.crypto.randomUUID();
-  window.sessionStorage.setItem("vc.localPlayerId", next);
+  window.localStorage.setItem("vc.localPlayerId", next);
   return next;
 }
 
