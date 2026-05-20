@@ -33,6 +33,24 @@ function applyAction(state: GameState, action: GameAction): GameState {
   return result.state;
 }
 
+function pickSkipLabel(): string {
+  const roll = Math.random();
+
+  if (roll < 0.7) {
+    return "Pass";
+  }
+
+  if (roll < 0.8) {
+    return "Pass-o";
+  }
+
+  if (roll < 0.9) {
+    return "Skip";
+  }
+
+  return "Knucle-rap";
+}
+
 interface OpponentHandProps {
   readonly cardCount: number;
   readonly isSkipped: boolean;
@@ -86,6 +104,7 @@ export function App() {
   const [syncMode, setSyncMode] = useState<"local" | "remote">("local");
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [passNotice, setPassNotice] = useState<string | null>(null);
+  const [skipLabel, setSkipLabel] = useState(() => pickSkipLabel());
   const lastPassNoticeKey = useRef<string | null>(null);
   const preferredPlayerName = playerName.trim() || `Player ${localPlayerId.slice(0, 4)}`;
   const [game, setGame] = useState(() => createDemoGame(localPlayerId, preferredPlayerName, createLobbyCode()));
@@ -163,6 +182,10 @@ export function App() {
 
     return () => window.clearTimeout(timeoutId);
   }, [game.id, game.lastEvent, game.players, game.version]);
+
+  useEffect(() => {
+    setSkipLabel(pickSkipLabel());
+  }, [game.currentTurn, game.currentLeadingPlay]);
 
   useEffect(() => {
     let cancelled = false;
@@ -503,7 +526,7 @@ export function App() {
                 </button>
                 <button type="button" disabled={!isActiveTurn || game.currentLeadingPlay === null} onClick={skipTurn}>
                   <SkipForward size={18} aria-hidden="true" />
-                  Skip
+                  {skipLabel}
                 </button>
               </>
             )}
