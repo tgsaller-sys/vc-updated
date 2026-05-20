@@ -181,13 +181,19 @@ export function App() {
     const passingPlayerName =
       game.players.find((player) => player.id === game.lastEvent?.playerId)?.name ?? "A player";
     setPassNotice(`${passingPlayerName} passes.`);
+  }, [game.id, game.lastEvent, game.players, game.version]);
+
+  useEffect(() => {
+    if (passNotice === null) {
+      return undefined;
+    }
 
     const timeoutId = window.setTimeout(() => {
       setPassNotice(null);
     }, 1800);
 
     return () => window.clearTimeout(timeoutId);
-  }, [game.id, game.lastEvent, game.players, game.version]);
+  }, [passNotice]);
 
   useEffect(() => {
     setSkipLabel(pickSkipLabel());
