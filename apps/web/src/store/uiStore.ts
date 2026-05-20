@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import type { CardId, PlayerId } from "@vc/game";
 
+const defaultMaxCardsPerPlayer = 13;
+const minMaxCardsPerPlayer = 1;
+const maxMaxCardsPerPlayer = 52;
+
 interface UiState {
   readonly localPlayerId: PlayerId;
   readonly playerName: string;
@@ -35,15 +39,17 @@ function createInitialPlayerName(): string {
 
 function createInitialMaxCardsPerPlayer(): number {
   const storedValue = Number(window.localStorage.getItem("vc.maxCardsPerPlayer"));
-  return Number.isInteger(storedValue) && storedValue >= 1 && storedValue <= 52 ? storedValue : 52;
+  return Number.isInteger(storedValue) && storedValue >= minMaxCardsPerPlayer && storedValue <= maxMaxCardsPerPlayer
+    ? storedValue
+    : defaultMaxCardsPerPlayer;
 }
 
 function normalizeMaxCardsPerPlayer(maxCardsPerPlayer: number): number {
   if (!Number.isFinite(maxCardsPerPlayer)) {
-    return 52;
+    return defaultMaxCardsPerPlayer;
   }
 
-  return Math.min(52, Math.max(1, Math.floor(maxCardsPerPlayer)));
+  return Math.min(maxMaxCardsPerPlayer, Math.max(minMaxCardsPerPlayer, Math.floor(maxCardsPerPlayer)));
 }
 
 export const useUiStore = create<UiState>((set) => ({
