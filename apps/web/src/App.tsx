@@ -159,6 +159,12 @@ export function App() {
     game.winnerId === null
       ? null
       : (game.players.find((player) => player.id === game.winnerId)?.name ?? game.winnerId);
+  const turnCalloutText =
+    game.phase === "playing" && game.currentTurn !== null
+      ? isActiveTurn
+        ? "Your turn!"
+        : `${currentTurnName}'s turn`
+      : null;
 
   useEffect(() => {
     if (game.lastEvent?.type !== "skip") {
@@ -448,6 +454,16 @@ export function App() {
                 exit={{ opacity: 0, scale: 0.9 }}
               >
                 BOMB!
+              </motion.div>
+            ) : turnCalloutText !== null ? (
+              <motion.div
+                key={`turn-${game.currentTurn ?? "waiting"}`}
+                className="turn-callout"
+                initial={{ opacity: 0, scale: 0.76, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+              >
+                {turnCalloutText}
               </motion.div>
             ) : null}
           </AnimatePresence>
