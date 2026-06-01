@@ -16,7 +16,7 @@ export interface EasyBotOptions {
   readonly passProbability?: number;
 }
 
-export const botTurnDelayMs = 5000;
+export const botTurnDelayMs = 2000;
 
 export function isBotPlayer(player: Player | undefined): boolean {
   return player?.kind === "bot";

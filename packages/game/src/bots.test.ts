@@ -46,8 +46,8 @@ function fourSeatGame(): GameState {
 }
 
 describe("computer players", () => {
-  it("waits five seconds before automated turns in browser dispatchers", () => {
-    expect(botTurnDelayMs).toBe(5000);
+  it("waits two seconds before automated turns in browser dispatchers", () => {
+    expect(botTurnDelayMs).toBe(2000);
   });
 
   it("returns a local two-seat demo turn from its bot seat to the human", () => {
