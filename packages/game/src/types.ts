@@ -32,18 +32,35 @@ export interface Player {
   readonly joinedAt: string;
 }
 
-export interface PlayedSet {
-  readonly playerId: PlayerId;
-  readonly cards: readonly Card[];
+export type CardMoveType = "single" | "pair" | "triple" | "straight" | "bomb";
+
+export type BombKind = "quad" | "double-straight";
+
+export interface MoveMetadata {
+  readonly bombKind?: BombKind;
 }
 
-export type PlayKind = "single" | "double" | "triple" | "quad" | "straight" | "double-straight-bomb";
-
-export interface PlayShape {
-  readonly kind: PlayKind;
-  readonly length: number;
-  readonly highRank: Rank;
+export interface CardMove {
+  readonly type: CardMoveType;
+  readonly cards: readonly Card[];
+  readonly primaryRank: Rank;
   readonly highCard: Card;
+  readonly length: number;
+  readonly metadata?: MoveMetadata;
+}
+
+export interface PassMove {
+  readonly type: "pass";
+  readonly cards: readonly [];
+  readonly primaryRank: null;
+  readonly highCard: null;
+  readonly length: 0;
+}
+
+export type Move = CardMove | PassMove;
+
+export interface PlayedMove extends CardMove {
+  readonly playerId: PlayerId;
 }
 
 export interface VcRuleOptions {
@@ -53,19 +70,10 @@ export interface VcRuleOptions {
 
 export interface GetLegalMovesInput {
   readonly hand: readonly Card[];
-  readonly currentTablePlay: readonly Card[] | null;
+  readonly currentTablePlay: CardMove | null;
   readonly isLeading: boolean;
   readonly options?: VcRuleOptions;
 }
-
-export type LegalMove =
-  | {
-      readonly type: "play-cards";
-      readonly cards: readonly Card[];
-    }
-  | {
-      readonly type: "pass";
-    };
 
 export type GamePhase = "lobby" | "playing" | "finished";
 
@@ -85,9 +93,9 @@ export interface GameState {
   readonly players: readonly Player[];
   readonly hands: Readonly<Record<PlayerId, readonly Card[]>>;
   readonly deck: readonly Card[];
-  readonly discardPile: readonly PlayedSet[];
+  readonly discardPile: readonly PlayedMove[];
   readonly currentTurn: PlayerId | null;
-  readonly currentLeadingPlay: PlayedSet | null;
+  readonly currentLeadingPlay: PlayedMove | null;
   readonly skippedPlayers: readonly PlayerId[];
   readonly winnerId: PlayerId | null;
   readonly lastEvent: GameEvent | null;
@@ -134,6 +142,7 @@ export type PlayValidationResult =
   | {
       readonly ok: true;
       readonly cards: readonly Card[];
+      readonly move: CardMove;
     }
   | {
       readonly ok: false;

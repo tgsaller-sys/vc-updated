@@ -6,14 +6,14 @@ import {
   dealEqually,
   dealForVc,
   dealForVcWithMaxCards,
-  identifyPlayShape,
+  identifyCardMove,
   isBombPlay,
   reduceGameAction,
   shuffleDeck,
   sortCardsForPlay,
   validatePlay
 } from ".";
-import type { Card, CardId, GameState, Player } from ".";
+import type { Card, CardId, GameState, PlayedMove, Player } from ".";
 
 const players: readonly Player[] = [
   { id: "player-a", name: "Ada", connected: true, joinedAt: "2026-01-01T00:00:00.000Z" },
@@ -56,6 +56,16 @@ function card(id: CardId): Card {
   }
 
   return found;
+}
+
+function playedMove(playerId: string, cards: readonly Card[]): PlayedMove {
+  const move = identifyCardMove(cards);
+
+  if (move === null) {
+    throw new Error("Expected test cards to form a legal move.");
+  }
+
+  return { playerId, ...move };
 }
 
 function playingStateWithHands(hands: Readonly<Record<string, readonly Card[]>>): GameState {
@@ -175,41 +185,41 @@ describe("card sorting", () => {
 
 describe("current VC rule characterization", () => {
   it("recognizes singles", () => {
-    expect(identifyPlayShape([card("spades-7")])).toMatchObject({
-      kind: "single",
+    expect(identifyCardMove([card("spades-7")])).toMatchObject({
+      type: "single",
       length: 1,
-      highRank: "7",
+      primaryRank: "7",
       highCard: card("spades-7")
     });
   });
 
   it("recognizes pairs only when both cards have the same rank", () => {
-    expect(identifyPlayShape([card("spades-7"), card("clubs-7")])).toMatchObject({
-      kind: "double",
+    expect(identifyCardMove([card("spades-7"), card("clubs-7")])).toMatchObject({
+      type: "pair",
       length: 2,
-      highRank: "7"
+      primaryRank: "7"
     });
-    expect(identifyPlayShape([card("spades-7"), card("clubs-8")])).toBeNull();
+    expect(identifyCardMove([card("spades-7"), card("clubs-8")])).toBeNull();
   });
 
   it("recognizes triples only when all cards have the same rank", () => {
-    expect(identifyPlayShape([card("spades-9"), card("clubs-9"), card("diamonds-9")])).toMatchObject({
-      kind: "triple",
+    expect(identifyCardMove([card("spades-9"), card("clubs-9"), card("diamonds-9")])).toMatchObject({
+      type: "triple",
       length: 3,
-      highRank: "9"
+      primaryRank: "9"
     });
-    expect(identifyPlayShape([card("spades-9"), card("clubs-9"), card("diamonds-10")])).toBeNull();
+    expect(identifyCardMove([card("spades-9"), card("clubs-9"), card("diamonds-10")])).toBeNull();
   });
 
   it("recognizes straights of at least three cards and excludes 2s", () => {
-    expect(identifyPlayShape([card("spades-4"), card("clubs-5"), card("diamonds-6")])).toMatchObject({
-      kind: "straight",
+    expect(identifyCardMove([card("spades-4"), card("clubs-5"), card("diamonds-6")])).toMatchObject({
+      type: "straight",
       length: 3,
-      highRank: "6"
+      primaryRank: "6"
     });
-    expect(identifyPlayShape([card("spades-4"), card("clubs-5")])).toBeNull();
+    expect(identifyCardMove([card("spades-4"), card("clubs-5")])).toBeNull();
     expect(
-      identifyPlayShape([card("spades-Q"), card("clubs-K"), card("diamonds-A"), card("hearts-2")])
+      identifyCardMove([card("spades-Q"), card("clubs-K"), card("diamonds-A"), card("hearts-2")])
     ).toBeNull();
   });
 
@@ -224,9 +234,12 @@ describe("current VC rule characterization", () => {
       card("clubs-6")
     ];
 
-    expect(identifyPlayShape(quad)?.kind).toBe("quad");
+    expect(identifyCardMove(quad)).toMatchObject({ type: "bomb", metadata: { bombKind: "quad" } });
     expect(isBombPlay(quad)).toBe(true);
-    expect(identifyPlayShape(doubleStraight)?.kind).toBe("double-straight-bomb");
+    expect(identifyCardMove(doubleStraight)).toMatchObject({
+      type: "bomb",
+      metadata: { bombKind: "double-straight" }
+    });
     expect(isBombPlay(doubleStraight)).toBe(true);
   });
 
@@ -238,10 +251,7 @@ describe("current VC rule characterization", () => {
         "player-c": [card("diamonds-5")]
       }),
       currentTurn: "player-b",
-      currentLeadingPlay: {
-        playerId: "player-a",
-        cards: [card("spades-3")]
-      }
+      currentLeadingPlay: playedMove("player-a", [card("spades-3")])
     };
 
     const result = assertValidTransition(
@@ -280,12 +290,7 @@ describe("current VC rule characterization", () => {
     expect(afterRoundReset.currentTurn).toBe("player-a");
     expect(afterRoundReset.currentLeadingPlay).toBeNull();
     expect(afterRoundReset.skippedPlayers).toEqual([]);
-    expect(afterRoundReset.discardPile).toEqual([
-      {
-        playerId: "player-a",
-        cards: [card("spades-3")]
-      }
-    ]);
+    expect(afterRoundReset.discardPile).toEqual([playedMove("player-a", [card("spades-3")])]);
   });
 
   it("finishes immediately when a player goes out", () => {
@@ -306,10 +311,7 @@ describe("current VC rule characterization", () => {
     expect(result.hands["player-a"]).toEqual([]);
     expect(result.phase).toBe("finished");
     expect(result.winnerId).toBe("player-a");
-    expect(result.discardPile.at(-1)).toEqual({
-      playerId: "player-a",
-      cards: [card("spades-3")]
-    });
+    expect(result.discardPile.at(-1)).toEqual(playedMove("player-a", [card("spades-3")]));
   });
 
   it.todo("skips players who already passed when a later pass wraps around the table");
@@ -372,7 +374,7 @@ describe("VC play rules", () => {
     });
     const stateAfterOpening = {
       ...state,
-      discardPile: [{ playerId: "player-b", cards: [card("spades-3")] }]
+      discardPile: [playedMove("player-b", [card("spades-3")])]
     };
 
     expect(validatePlay(stateAfterOpening, "player-a", ["spades-K", "clubs-A", "diamonds-2"]).ok).toBe(false);
@@ -386,7 +388,7 @@ describe("VC play rules", () => {
     });
     const stateAfterOpening = {
       ...state,
-      discardPile: [{ playerId: "player-b", cards: [card("spades-3")] }]
+      discardPile: [playedMove("player-b", [card("spades-3")])]
     };
 
     expect(validatePlay(stateAfterOpening, "player-a", ["spades-6", "diamonds-7"]).ok).toBe(false);
@@ -423,15 +425,29 @@ describe("VC play rules", () => {
         "player-b": [],
         "player-c": []
       }),
-      currentLeadingPlay: {
-        playerId: "player-b",
-        cards: [card("spades-6"), card("clubs-6"), card("diamonds-6")]
-      }
+      currentLeadingPlay: playedMove("player-b", [card("spades-6"), card("clubs-6"), card("diamonds-6")])
     };
 
     expect(validatePlay(state, "player-a", ["spades-7", "clubs-7", "diamonds-7"]).ok).toBe(true);
     expect(validatePlay(state, "player-a", ["spades-8"]).ok).toBe(false);
     expect(validatePlay(state, "player-a", ["spades-7", "clubs-7"]).ok).toBe(false);
+  });
+
+  it("continues validating cards-only table plays persisted before the canonical move format", () => {
+    const legacyLeadingPlay = {
+      playerId: "player-b",
+      cards: [card("spades-6"), card("clubs-6")]
+    } as unknown as GameState["currentLeadingPlay"];
+    const state: GameState = {
+      ...playingStateWithHands({
+        "player-a": [card("spades-7"), card("clubs-7")],
+        "player-b": [],
+        "player-c": []
+      }),
+      currentLeadingPlay: legacyLeadingPlay
+    };
+
+    expect(validatePlay(state, "player-a", ["spades-7", "clubs-7"]).ok).toBe(true);
   });
 
   it("requires played cards to beat the leading play by rank", () => {
@@ -441,10 +457,7 @@ describe("VC play rules", () => {
         "player-b": [],
         "player-c": []
       }),
-      currentLeadingPlay: {
-        playerId: "player-b",
-        cards: [card("spades-6"), card("clubs-6")]
-      }
+      currentLeadingPlay: playedMove("player-b", [card("spades-6"), card("clubs-6")])
     };
 
     expect(validatePlay(state, "player-a", ["spades-5", "clubs-5"]).ok).toBe(false);
@@ -458,10 +471,7 @@ describe("VC play rules", () => {
         "player-b": [],
         "player-c": []
       }),
-      currentLeadingPlay: {
-        playerId: "player-b",
-        cards: [card("clubs-5"), card("diamonds-5")]
-      }
+      currentLeadingPlay: playedMove("player-b", [card("clubs-5"), card("diamonds-5")])
     };
 
     expect(validatePlay(state, "player-a", ["spades-5", "hearts-5"]).ok).toBe(true);
@@ -481,10 +491,7 @@ describe("VC play rules", () => {
         "player-b": [],
         "player-c": []
       }),
-      currentLeadingPlay: {
-        playerId: "player-b",
-        cards: [card("spades-3"), card("clubs-4"), card("diamonds-5")]
-      }
+      currentLeadingPlay: playedMove("player-b", [card("spades-3"), card("clubs-4"), card("diamonds-5")])
     };
 
     expect(validatePlay(state, "player-a", ["spades-4", "clubs-5", "diamonds-6"]).ok).toBe(true);
@@ -498,10 +505,7 @@ describe("VC play rules", () => {
         "player-b": [],
         "player-c": []
       }),
-      currentLeadingPlay: {
-        playerId: "player-b",
-        cards: [card("hearts-4"), card("hearts-5"), card("spades-6")]
-      }
+      currentLeadingPlay: playedMove("player-b", [card("hearts-4"), card("hearts-5"), card("spades-6")])
     };
 
     expect(validatePlay(state, "player-a", ["spades-4", "spades-5", "clubs-6"]).ok).toBe(true);
@@ -514,10 +518,7 @@ describe("VC play rules", () => {
         "player-b": [],
         "player-c": []
       }),
-      currentLeadingPlay: {
-        playerId: "player-b",
-        cards: [card("spades-2")]
-      }
+      currentLeadingPlay: playedMove("player-b", [card("spades-2")])
     };
 
     expect(validatePlay(state, "player-a", ["spades-4", "clubs-4", "diamonds-4", "hearts-4"]).ok).toBe(true);
@@ -537,10 +538,7 @@ describe("VC play rules", () => {
         "player-b": [],
         "player-c": []
       }),
-      currentLeadingPlay: {
-        playerId: "player-b",
-        cards: [card("hearts-2")]
-      }
+      currentLeadingPlay: playedMove("player-b", [card("hearts-2")])
     };
 
     expect(
@@ -562,10 +560,7 @@ describe("VC play rules", () => {
         "player-b": [],
         "player-c": []
       }),
-      currentLeadingPlay: {
-        playerId: "player-b",
-        cards: [card("hearts-A")]
-      }
+      currentLeadingPlay: playedMove("player-b", [card("hearts-A")])
     };
 
     expect(
@@ -688,7 +683,7 @@ describe("skip/reset logic", () => {
     });
     const stateAfterOpening = {
       ...initialState,
-      discardPile: [{ playerId: "player-c", cards: [card("spades-3")] }]
+      discardPile: [playedMove("player-c", [card("spades-3")])]
     };
 
     const afterPlayerOne = assertValidTransition(

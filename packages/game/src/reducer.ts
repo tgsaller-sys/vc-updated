@@ -167,8 +167,8 @@ export function reduceGameAction(
       const nextState: GameState = {
         ...state,
         hands: nextHands,
-        discardPile: [...state.discardPile, { playerId: action.actorId, cards: validation.cards }],
-        currentLeadingPlay: { playerId: action.actorId, cards: validation.cards },
+        discardPile: [...state.discardPile, { playerId: action.actorId, ...validation.move }],
+        currentLeadingPlay: { playerId: action.actorId, ...validation.move },
         lastEvent: { type: "play", playerId: action.actorId },
         skippedPlayers: state.skippedPlayers,
         currentTurn: nextEligiblePlayerId(state.turnOrder, action.actorId, state.skippedPlayers),

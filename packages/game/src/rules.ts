@@ -2,11 +2,13 @@ import { compareCardsForPlay, findCardsById, highestCardForPlay, rankValue, sort
 import type {
   Card,
   CardId,
+  CardMove,
+  CardMoveType,
   GameState,
   GetLegalMovesInput,
-  LegalMove,
+  Move,
+  PassMove,
   PlayerId,
-  PlayShape,
   PlayValidationResult,
   RuleValidator,
   ValidationResult
@@ -25,16 +27,16 @@ function sameRank(cards: readonly Card[]): boolean {
   return firstRank !== undefined && cards.every((card) => card.rank === firstRank);
 }
 
-function getMultipleKind(length: number): PlayShape["kind"] | null {
+function getMultipleType(length: number): CardMoveType | null {
   switch (length) {
     case 1:
       return "single";
     case 2:
-      return "double";
+      return "pair";
     case 3:
       return "triple";
     case 4:
-      return "quad";
+      return "bomb";
     default:
       return null;
   }
@@ -100,14 +102,14 @@ function doubleStraightHighCard(cards: readonly Card[]): Card | null {
   return highestCardForPlay(cards);
 }
 
-export function identifyPlayShape(cards: readonly Card[]): PlayShape | null {
+export function identifyCardMove(cards: readonly Card[]): CardMove | null {
   if (cards.length === 0) {
     return null;
   }
 
-  const multipleKind = getMultipleKind(cards.length);
+  const multipleType = getMultipleType(cards.length);
 
-  if (multipleKind !== null && sameRank(cards)) {
+  if (multipleType !== null && sameRank(cards)) {
     const highCard = highestCardForPlay(cards);
 
     if (highCard === null) {
@@ -115,10 +117,12 @@ export function identifyPlayShape(cards: readonly Card[]): PlayShape | null {
     }
 
     return {
-      kind: multipleKind,
+      type: multipleType,
+      cards: sortCardsForPlay(cards),
       length: cards.length,
-      highRank: highCard.rank,
-      highCard
+      primaryRank: highCard.rank,
+      highCard,
+      ...(multipleType === "bomb" ? { metadata: { bombKind: "quad" as const } } : {})
     };
   }
 
@@ -132,9 +136,10 @@ export function identifyPlayShape(cards: readonly Card[]): PlayShape | null {
     }
 
     return {
-      kind: "straight",
+      type: "straight",
+      cards: sortCardsForPlay(cards),
       length: cards.length,
-      highRank: highStraightRank,
+      primaryRank: highStraightRank,
       highCard
     };
   }
@@ -143,38 +148,40 @@ export function identifyPlayShape(cards: readonly Card[]): PlayShape | null {
 
   if (highDoubleStraightCard !== null) {
     return {
-      kind: "double-straight-bomb",
+      type: "bomb",
+      cards: sortCardsForPlay(cards),
       length: cards.length,
-      highRank: highDoubleStraightCard.rank,
-      highCard: highDoubleStraightCard
+      primaryRank: highDoubleStraightCard.rank,
+      highCard: highDoubleStraightCard,
+      metadata: { bombKind: "double-straight" }
     };
   }
 
   return null;
 }
 
-export function isBombShape(shape: PlayShape): boolean {
-  return shape.kind === "quad" || shape.kind === "double-straight-bomb";
+export function isBombMove(move: CardMove): boolean {
+  return move.type === "bomb";
 }
 
 export function isBombPlay(cards: readonly Card[]): boolean {
-  const shape = identifyPlayShape(cards);
-  return shape !== null && isBombShape(shape);
+  const move = identifyCardMove(cards);
+  return move !== null && isBombMove(move);
 }
 
-function isSingleTwo(shape: PlayShape): boolean {
-  return shape.kind === "single" && shape.highCard.rank === "2";
+function isSingleTwo(move: CardMove): boolean {
+  return move.type === "single" && move.highCard.rank === "2";
 }
 
 function validateVcCards(
   cards: readonly Card[],
-  currentTablePlay: readonly Card[] | null,
+  currentTablePlay: CardMove | null,
   isLeading: boolean,
   requiredOpeningCard?: Card
 ): ValidationResult {
-  const nextShape = identifyPlayShape(cards);
+  const nextMove = identifyCardMove(cards);
 
-  if (nextShape === null) {
+  if (nextMove === null) {
     return {
       ok: false,
       reason: "Play singles, same-rank doubles/triples/quads, or straights of 3 or more cards."
@@ -189,7 +196,7 @@ function validateVcCards(
   }
 
   if (isLeading) {
-    if (nextShape.kind === "double-straight-bomb") {
+    if (nextMove.metadata?.bombKind === "double-straight") {
       return { ok: false, reason: "A double-straight bomb can only be played on a single 2." };
     }
 
@@ -200,25 +207,26 @@ function validateVcCards(
     return { ok: false, reason: "There is no current leading play." };
   }
 
-  const leadingShape = identifyPlayShape(currentTablePlay);
-
-  if (leadingShape === null) {
-    return { ok: false, reason: "The current leading play has an invalid shape." };
-  }
-
-  if (isSingleTwo(leadingShape) && isBombShape(nextShape)) {
+  if (isSingleTwo(currentTablePlay) && isBombMove(nextMove)) {
     return { ok: true };
   }
 
-  if (nextShape.kind === "double-straight-bomb" && leadingShape.kind !== "double-straight-bomb") {
+  if (
+    nextMove.metadata?.bombKind === "double-straight" &&
+    currentTablePlay.metadata?.bombKind !== "double-straight"
+  ) {
     return { ok: false, reason: "A double-straight bomb can only be played on a single 2." };
   }
 
-  if (nextShape.kind !== leadingShape.kind || nextShape.length !== leadingShape.length) {
+  if (
+    nextMove.type !== currentTablePlay.type ||
+    nextMove.length !== currentTablePlay.length ||
+    nextMove.metadata?.bombKind !== currentTablePlay.metadata?.bombKind
+  ) {
     return { ok: false, reason: "Play the same format as the current leading play or skip." };
   }
 
-  if (compareCardsForPlay(nextShape.highCard, leadingShape.highCard) <= 0) {
+  if (compareCardsForPlay(nextMove.highCard, currentTablePlay.highCard) <= 0) {
     return { ok: false, reason: "Play higher cards than the current leading play or skip." };
   }
 
@@ -339,13 +347,21 @@ export function getLegalMoves({
   currentTablePlay,
   isLeading,
   options = {}
-}: GetLegalMovesInput): readonly LegalMove[] {
-  const legalPlays: readonly LegalMove[] = candidatePlays(hand)
+}: GetLegalMovesInput): readonly Move[] {
+  const legalPlays: readonly Move[] = candidatePlays(hand)
     .filter((cards) => validateVcCards(cards, currentTablePlay, isLeading, options.requiredOpeningCard).ok)
-    .map((cards) => ({ type: "play-cards", cards }));
+    .map((cards) => identifyCardMove(cards))
+    .filter((move): move is CardMove => move !== null);
 
   if (options.allowPass !== false && !isLeading && currentTablePlay !== null) {
-    return [...legalPlays, { type: "pass" }];
+    const pass: PassMove = {
+      type: "pass",
+      cards: [],
+      primaryRank: null,
+      highCard: null,
+      length: 0
+    };
+    return [...legalPlays, pass];
   }
 
   return legalPlays;
@@ -364,7 +380,7 @@ export const validateVcPlay: RuleValidator = (state, _actorId, cards) => {
 
   return validateVcCards(
     cards,
-    state.currentLeadingPlay?.cards ?? null,
+    state.currentLeadingPlay === null ? null : identifyCardMove(state.currentLeadingPlay.cards),
     state.currentLeadingPlay === null,
     requiredOpeningCard
   );
@@ -407,7 +423,13 @@ export function validatePlay(
     }
   }
 
-  return { ok: true, cards };
+  const move = identifyCardMove(cards);
+
+  if (move === null) {
+    return { ok: false, reason: "The selected cards do not form a recognized VC move." };
+  }
+
+  return { ok: true, cards, move };
 }
 
 export function validateSkip(state: GameState, actorId: PlayerId): ValidationResult {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createDeck, getLegalMoves } from ".";
-import type { Card, CardId, LegalMove } from ".";
+import { createDeck, getLegalMoves, identifyCardMove } from ".";
+import type { Card, CardId, CardMove, Move } from ".";
 
 function card(id: CardId): Card {
   const found = createDeck().find((nextCard) => nextCard.id === id);
@@ -12,22 +12,38 @@ function card(id: CardId): Card {
   return found;
 }
 
-function playIds(moves: readonly LegalMove[]): readonly (readonly CardId[])[] {
+function move(cards: readonly Card[]): CardMove {
+  const identified = identifyCardMove(cards);
+
+  if (identified === null) {
+    throw new Error("Expected test cards to form a legal move.");
+  }
+
+  return identified;
+}
+
+function playIds(moves: readonly Move[]): readonly (readonly CardId[])[] {
   return moves
-    .filter((move): move is Extract<LegalMove, { readonly type: "play-cards" }> => move.type === "play-cards")
-    .map((move) => move.cards.map((nextCard) => nextCard.id));
+    .filter((nextMove): nextMove is CardMove => nextMove.type !== "pass")
+    .map((nextMove) => nextMove.cards.map((nextCard) => nextCard.id));
 }
 
 describe("getLegalMoves", () => {
   it("returns higher singles in rank and suit order, followed by pass", () => {
     const moves = getLegalMoves({
       hand: [card("spades-5"), card("clubs-5"), card("hearts-5"), card("spades-2")],
-      currentTablePlay: [card("spades-5")],
+      currentTablePlay: move([card("spades-5")]),
       isLeading: false
     });
 
     expect(playIds(moves)).toEqual([["clubs-5"], ["hearts-5"], ["spades-2"]]);
-    expect(moves.at(-1)).toEqual({ type: "pass" });
+    expect(moves.at(-1)).toEqual({
+      type: "pass",
+      cards: [],
+      primaryRank: null,
+      highCard: null,
+      length: 0
+    });
   });
 
   it("returns only pairs that beat the table pair by rank or highest suit", () => {
@@ -40,7 +56,7 @@ describe("getLegalMoves", () => {
         card("clubs-6"),
         card("diamonds-6")
       ],
-      currentTablePlay: [card("clubs-5"), card("diamonds-5")],
+      currentTablePlay: move([card("clubs-5"), card("diamonds-5")]),
       isLeading: false
     });
 
@@ -63,7 +79,7 @@ describe("getLegalMoves", () => {
         card("clubs-8"),
         card("hearts-8")
       ],
-      currentTablePlay: [card("spades-7"), card("clubs-7"), card("hearts-7")],
+      currentTablePlay: move([card("spades-7"), card("clubs-7"), card("hearts-7")]),
       isLeading: false
     });
 
@@ -81,7 +97,7 @@ describe("getLegalMoves", () => {
         card("clubs-A"),
         card("diamonds-2")
       ],
-      currentTablePlay: [card("spades-3"), card("clubs-4"), card("diamonds-5")],
+      currentTablePlay: move([card("spades-3"), card("clubs-4"), card("diamonds-5")]),
       isLeading: false
     });
 
@@ -106,7 +122,7 @@ describe("getLegalMoves", () => {
         card("diamonds-8"),
         card("hearts-8")
       ],
-      currentTablePlay: [card("hearts-2")],
+      currentTablePlay: move([card("hearts-2")]),
       isLeading: false
     });
 
@@ -114,22 +130,30 @@ describe("getLegalMoves", () => {
       ["spades-8", "clubs-8", "diamonds-8", "hearts-8"],
       ["spades-4", "clubs-4", "spades-5", "clubs-5", "spades-6", "clubs-6"]
     ]);
-    expect(moves.at(-1)).toEqual({ type: "pass" });
+    expect(moves.at(-1)?.type).toBe("pass");
   });
 
   it("includes pass only when the player is following and passing is enabled", () => {
     expect(
       getLegalMoves({
         hand: [card("clubs-4")],
-        currentTablePlay: [card("spades-5")],
+        currentTablePlay: move([card("spades-5")]),
         isLeading: false
       })
-    ).toEqual([{ type: "pass" }]);
+    ).toEqual([
+      {
+        type: "pass",
+        cards: [],
+        primaryRank: null,
+        highCard: null,
+        length: 0
+      }
+    ]);
 
     expect(
       getLegalMoves({
         hand: [card("clubs-4")],
-        currentTablePlay: [card("spades-5")],
+        currentTablePlay: move([card("spades-5")]),
         isLeading: false,
         options: { allowPass: false }
       })
@@ -161,7 +185,7 @@ describe("getLegalMoves", () => {
       "spades-6",
       "clubs-6"
     ]);
-    expect(moves).not.toContainEqual({ type: "pass" });
+    expect(moves.some((nextMove) => nextMove.type === "pass")).toBe(false);
   });
 
   it("limits an opening lead to plays that contain the required lowest card", () => {
@@ -181,7 +205,7 @@ describe("getLegalMoves", () => {
 
   it("does not mutate its input and returns the same ordered moves each time", () => {
     const hand = [card("hearts-6"), card("spades-4"), card("clubs-5")];
-    const currentTablePlay = [card("spades-3"), card("clubs-4"), card("diamonds-5")];
+    const currentTablePlay = move([card("spades-3"), card("clubs-4"), card("diamonds-5")]);
     const before = JSON.stringify({ hand, currentTablePlay });
 
     const first = getLegalMoves({ hand, currentTablePlay, isLeading: false });
