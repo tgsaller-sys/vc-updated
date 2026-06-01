@@ -6,6 +6,8 @@ import {
   dealEqually,
   dealForVc,
   dealForVcWithMaxCards,
+  identifyPlayShape,
+  isBombPlay,
   reduceGameAction,
   shuffleDeck,
   sortCardsForPlay,
@@ -169,6 +171,148 @@ describe("card sorting", () => {
       "hearts-2"
     ]);
   });
+});
+
+describe("current VC rule characterization", () => {
+  it("recognizes singles", () => {
+    expect(identifyPlayShape([card("spades-7")])).toMatchObject({
+      kind: "single",
+      length: 1,
+      highRank: "7",
+      highCard: card("spades-7")
+    });
+  });
+
+  it("recognizes pairs only when both cards have the same rank", () => {
+    expect(identifyPlayShape([card("spades-7"), card("clubs-7")])).toMatchObject({
+      kind: "double",
+      length: 2,
+      highRank: "7"
+    });
+    expect(identifyPlayShape([card("spades-7"), card("clubs-8")])).toBeNull();
+  });
+
+  it("recognizes triples only when all cards have the same rank", () => {
+    expect(identifyPlayShape([card("spades-9"), card("clubs-9"), card("diamonds-9")])).toMatchObject({
+      kind: "triple",
+      length: 3,
+      highRank: "9"
+    });
+    expect(identifyPlayShape([card("spades-9"), card("clubs-9"), card("diamonds-10")])).toBeNull();
+  });
+
+  it("recognizes straights of at least three cards and excludes 2s", () => {
+    expect(identifyPlayShape([card("spades-4"), card("clubs-5"), card("diamonds-6")])).toMatchObject({
+      kind: "straight",
+      length: 3,
+      highRank: "6"
+    });
+    expect(identifyPlayShape([card("spades-4"), card("clubs-5")])).toBeNull();
+    expect(
+      identifyPlayShape([card("spades-Q"), card("clubs-K"), card("diamonds-A"), card("hearts-2")])
+    ).toBeNull();
+  });
+
+  it("treats quads and consecutive pair runs as bombs or chops", () => {
+    const quad = [card("spades-8"), card("clubs-8"), card("diamonds-8"), card("hearts-8")];
+    const doubleStraight = [
+      card("spades-4"),
+      card("clubs-4"),
+      card("spades-5"),
+      card("clubs-5"),
+      card("spades-6"),
+      card("clubs-6")
+    ];
+
+    expect(identifyPlayShape(quad)?.kind).toBe("quad");
+    expect(isBombPlay(quad)).toBe(true);
+    expect(identifyPlayShape(doubleStraight)?.kind).toBe("double-straight-bomb");
+    expect(isBombPlay(doubleStraight)).toBe(true);
+  });
+
+  it("records a pass and advances to the next player", () => {
+    const state = {
+      ...playingStateWithHands({
+        "player-a": [card("spades-3"), card("clubs-8")],
+        "player-b": [card("clubs-4")],
+        "player-c": [card("diamonds-5")]
+      }),
+      currentTurn: "player-b",
+      currentLeadingPlay: {
+        playerId: "player-a",
+        cards: [card("spades-3")]
+      }
+    };
+
+    const result = assertValidTransition(
+      reduceGameAction(state, { type: "skip", actorId: "player-b" })
+    );
+
+    expect(result.currentTurn).toBe("player-c");
+    expect(result.skippedPlayers).toEqual(["player-b"]);
+    expect(result.lastEvent).toEqual({
+      type: "skip",
+      playerId: "player-b"
+    });
+  });
+
+  it("resets the round after every other player passes while preserving table history", () => {
+    const state = playingStateWithHands({
+      "player-a": [card("spades-3"), card("clubs-8")],
+      "player-b": [card("clubs-4")],
+      "player-c": [card("diamonds-5")]
+    });
+
+    const afterPlay = assertValidTransition(
+      reduceGameAction(state, {
+        type: "play-cards",
+        actorId: "player-a",
+        cardIds: ["spades-3"]
+      })
+    );
+    const afterFirstPass = assertValidTransition(
+      reduceGameAction(afterPlay, { type: "skip", actorId: "player-b" })
+    );
+    const afterRoundReset = assertValidTransition(
+      reduceGameAction(afterFirstPass, { type: "skip", actorId: "player-c" })
+    );
+
+    expect(afterRoundReset.currentTurn).toBe("player-a");
+    expect(afterRoundReset.currentLeadingPlay).toBeNull();
+    expect(afterRoundReset.skippedPlayers).toEqual([]);
+    expect(afterRoundReset.discardPile).toEqual([
+      {
+        playerId: "player-a",
+        cards: [card("spades-3")]
+      }
+    ]);
+  });
+
+  it("finishes immediately when a player goes out", () => {
+    const state = playingStateWithHands({
+      "player-a": [card("spades-3")],
+      "player-b": [card("clubs-4")],
+      "player-c": [card("diamonds-5")]
+    });
+
+    const result = assertValidTransition(
+      reduceGameAction(state, {
+        type: "play-cards",
+        actorId: "player-a",
+        cardIds: ["spades-3"]
+      })
+    );
+
+    expect(result.hands["player-a"]).toEqual([]);
+    expect(result.phase).toBe("finished");
+    expect(result.winnerId).toBe("player-a");
+    expect(result.discardPile.at(-1)).toEqual({
+      playerId: "player-a",
+      cards: [card("spades-3")]
+    });
+  });
+
+  it.todo("skips players who already passed when a later pass wraps around the table");
 });
 
 describe("valid play detection", () => {
