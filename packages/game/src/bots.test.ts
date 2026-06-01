@@ -45,6 +45,33 @@ function fourSeatGame(): GameState {
 }
 
 describe("computer players", () => {
+  it("automatically plays the opening turn when a bot is dealt the 3 of spades", () => {
+    const lobby = players.reduce(
+      (state, player) => assertValidTransition(reduceGameAction(state, { type: "join", player })),
+      createInitialGameState("bot-opening-test")
+    );
+    const started = Array.from({ length: 1000 }, (_value, seed) =>
+      assertValidTransition(
+        reduceGameAction(lobby, { type: "start", actorId: "human-a", seed, maxCardsPerPlayer: 13 })
+      )
+    ).find((state) => state.currentTurn?.startsWith("bot-") === true);
+
+    expect(started).toBeDefined();
+
+    if (started === undefined) {
+      throw new Error("Expected to find a deal with a bot opening turn.");
+    }
+
+    const openingBotId = started.currentTurn;
+    const afterBot = runBotTurns(started, { random: () => 0.99 });
+
+    expect(openingBotId).not.toBeNull();
+    expect(started.hands[openingBotId ?? ""]?.some((nextCard) => nextCard.id === "spades-3")).toBe(true);
+    expect(afterBot.discardPile.at(0)?.playerId).toBe(openingBotId);
+    expect(afterBot.discardPile.at(0)?.cards.some((nextCard) => nextCard.id === "spades-3")).toBe(true);
+    expect(afterBot.currentTurn?.startsWith("human-")).toBe(true);
+  });
+
   it("advances consecutive bot turns in a two-human and two-bot game through normal reducer actions", () => {
     const afterHuman = assertValidTransition(
       reduceGameAction(fourSeatGame(), {

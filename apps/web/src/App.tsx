@@ -274,7 +274,7 @@ export function App() {
         const nextState = await dispatchValidatedRemoteAction(game, action);
         setGame(nextState);
       } else {
-        setGame((state) => applyAction(state, action));
+        setGame(applyAction(game, action));
       }
 
       clearSelection();
