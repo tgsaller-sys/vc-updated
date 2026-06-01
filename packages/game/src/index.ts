@@ -12,6 +12,7 @@ export { createShuffledDeck, dealEqually, dealForVc, dealForVcWithMaxCards, shuf
 export { reduceGameAction, assertValidTransition } from "./reducer";
 export {
   allowAnyOwnedCards,
+  getLegalMoves,
   identifyPlayShape,
   isBombPlay,
   isBombShape,
@@ -27,6 +28,8 @@ export type {
   GameEvent,
   GamePhase,
   GameState,
+  GetLegalMovesInput,
+  LegalMove,
   PlayedSet,
   Player,
   PlayerId,
@@ -36,5 +39,6 @@ export type {
   Rank,
   RuleValidator,
   Suit,
-  ValidationResult
+  ValidationResult,
+  VcRuleOptions
 } from "./types";

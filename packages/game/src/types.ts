@@ -46,6 +46,27 @@ export interface PlayShape {
   readonly highCard: Card;
 }
 
+export interface VcRuleOptions {
+  readonly requiredOpeningCard?: Card;
+  readonly allowPass?: boolean;
+}
+
+export interface GetLegalMovesInput {
+  readonly hand: readonly Card[];
+  readonly currentTablePlay: readonly Card[] | null;
+  readonly isLeading: boolean;
+  readonly options?: VcRuleOptions;
+}
+
+export type LegalMove =
+  | {
+      readonly type: "play-cards";
+      readonly cards: readonly Card[];
+    }
+  | {
+      readonly type: "pass";
+    };
+
 export type GamePhase = "lobby" | "playing" | "finished";
 
 export type GameEvent =
