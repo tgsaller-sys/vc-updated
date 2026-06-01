@@ -523,7 +523,7 @@ export function App() {
 
         <section className="center-table" aria-label="Table">
           <AnimatePresence mode="popLayout">
-            {winnerName !== null ? (
+            {winnerName !== null && game.phase === "finished" ? (
               <motion.div
                 key="winner"
                 className="winner-callout"
@@ -654,7 +654,11 @@ export function App() {
             ))}
           </motion.div>
           {error !== null ? <p className="error-text">{error}</p> : null}
-          {game.winnerId !== null ? <p className="winner-text">Winner: {game.winnerId}</p> : null}
+          {game.winnerId !== null ? (
+            <p className="winner-text">
+              {game.phase === "finished" ? "Winner" : "First out"}: {winnerName}
+            </p>
+          ) : null}
         </section>
       </section>
     </main>

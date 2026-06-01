@@ -12,6 +12,7 @@ export function createInitialGameState(id: string): GameState {
     currentLeadingPlay: null,
     skippedPlayers: [],
     winnerId: null,
+    finishedPlayerIds: [],
     lastEvent: null,
     turnOrder: [],
     version: 0

@@ -293,7 +293,7 @@ describe("current VC rule characterization", () => {
     expect(afterRoundReset.discardPile).toEqual([playedMove("player-a", [card("spades-3")])]);
   });
 
-  it("finishes immediately when a player goes out", () => {
+  it("continues after a player goes out and skips their empty hand", () => {
     const state = playingStateWithHands({
       "player-a": [card("spades-3")],
       "player-b": [card("clubs-4")],
@@ -309,9 +309,32 @@ describe("current VC rule characterization", () => {
     );
 
     expect(result.hands["player-a"]).toEqual([]);
-    expect(result.phase).toBe("finished");
+    expect(result.phase).toBe("playing");
     expect(result.winnerId).toBe("player-a");
+    expect(result.finishedPlayerIds).toEqual(["player-a"]);
+    expect(result.currentTurn).toBe("player-b");
     expect(result.discardPile.at(-1)).toEqual(playedMove("player-a", [card("spades-3")]));
+  });
+
+  it("gives a fresh lead to the next active player after everyone passes on a finisher", () => {
+    const state = playingStateWithHands({
+      "player-a": [card("spades-3")],
+      "player-b": [card("clubs-4")],
+      "player-c": [card("diamonds-5")]
+    });
+    const afterFinisher = assertValidTransition(
+      reduceGameAction(state, { type: "play-cards", actorId: "player-a", cardIds: ["spades-3"] })
+    );
+    const afterFirstSkip = assertValidTransition(
+      reduceGameAction(afterFinisher, { type: "skip", actorId: "player-b" })
+    );
+    const afterReset = assertValidTransition(
+      reduceGameAction(afterFirstSkip, { type: "skip", actorId: "player-c" })
+    );
+
+    expect(afterReset.currentTurn).toBe("player-b");
+    expect(afterReset.currentLeadingPlay).toBeNull();
+    expect(afterReset.skippedPlayers).toEqual([]);
   });
 
   it.todo("skips players who already passed when a later pass wraps around the table");
@@ -762,7 +785,7 @@ describe("skip/reset logic", () => {
 });
 
 describe("win condition", () => {
-  it("finishes when a player empties their hand", () => {
+  it("finishes when only one player remains after others empty their hands", () => {
     const state = playingStateWithHands({
       "player-a": [card("spades-3")],
       "player-b": [card("clubs-4")],
@@ -771,14 +794,23 @@ describe("win condition", () => {
     const actorId = "player-a";
     const handIds = (state.hands[actorId] ?? []).map((nextCard) => nextCard.id);
 
-    const result = reduceGameAction(state, {
+    const afterFirstFinisher = assertValidTransition(
+      reduceGameAction(state, {
+        type: "play-cards",
+        actorId,
+        cardIds: handIds
+      })
+    );
+    const result = reduceGameAction(afterFirstFinisher, {
       type: "play-cards",
-      actorId,
-      cardIds: handIds
+      actorId: "player-b",
+      cardIds: ["clubs-4"]
     });
 
     expect(result.validation.ok).toBe(true);
     expect(result.state.phase).toBe("finished");
     expect(result.state.winnerId).toBe(actorId);
+    expect(result.state.finishedPlayerIds).toEqual(["player-a", "player-b"]);
+    expect(result.state.currentTurn).toBeNull();
   });
 });

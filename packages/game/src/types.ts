@@ -101,6 +101,7 @@ export interface GameState {
   readonly currentLeadingPlay: PlayedMove | null;
   readonly skippedPlayers: readonly PlayerId[];
   readonly winnerId: PlayerId | null;
+  readonly finishedPlayerIds?: readonly PlayerId[];
   readonly lastEvent: GameEvent | null;
   readonly turnOrder: readonly PlayerId[];
   readonly version: number;

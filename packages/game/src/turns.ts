@@ -39,9 +39,10 @@ export function nextEligiblePlayerId(
 export function allOtherPlayersSkipped(
   turnOrder: readonly PlayerId[],
   lastPlayerToPlay: PlayerId,
-  skippedPlayers: readonly PlayerId[]
+  skippedPlayers: readonly PlayerId[],
+  finishedPlayerIds: readonly PlayerId[] = []
 ): boolean {
   return turnOrder
-    .filter((playerId) => playerId !== lastPlayerToPlay)
+    .filter((playerId) => playerId !== lastPlayerToPlay && !finishedPlayerIds.includes(playerId))
     .every((playerId) => skippedPlayers.includes(playerId));
 }

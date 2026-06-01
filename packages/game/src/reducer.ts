@@ -1,6 +1,6 @@
 import { createShuffledDeck, dealForVc, dealForVcWithMaxCards } from "./deck";
 import { sortCardsForPlay } from "./cards";
-import { allOtherPlayersSkipped, nextEligiblePlayerId, nextPlayerId } from "./turns";
+import { allOtherPlayersSkipped, nextEligiblePlayerId } from "./turns";
 import { setPlayerConnection, upsertPlayer } from "./state";
 import { validatePlay, validateSkip } from "./rules";
 import type { Card, GameAction, GameState, RuleValidator, ValidationResult } from "./types";
@@ -146,6 +146,7 @@ export function reduceGameAction(
           currentTurn: startingPlayerId,
           currentLeadingPlay: null,
           skippedPlayers: [],
+          finishedPlayerIds: [],
           lastEvent: null,
           turnOrder
         }),
@@ -164,6 +165,12 @@ export function reduceGameAction(
         ...state.hands,
         [action.actorId]: removeCardsFromHand(state.hands[action.actorId] ?? [], validation.cards)
       };
+      const playerWentOut = nextHands[action.actorId]?.length === 0;
+      const finishedPlayerIds = playerWentOut
+        ? [...new Set([...(state.finishedPlayerIds ?? []), action.actorId])]
+        : (state.finishedPlayerIds ?? []);
+      const remainingPlayerIds = state.turnOrder.filter((playerId) => !finishedPlayerIds.includes(playerId));
+      const gameFinished = remainingPlayerIds.length <= 1;
       const nextState: GameState = {
         ...state,
         hands: nextHands,
@@ -171,9 +178,12 @@ export function reduceGameAction(
         currentLeadingPlay: { playerId: action.actorId, ...validation.move },
         lastEvent: { type: "play", playerId: action.actorId },
         skippedPlayers: state.skippedPlayers,
-        currentTurn: nextEligiblePlayerId(state.turnOrder, action.actorId, state.skippedPlayers),
-        phase: nextHands[action.actorId]?.length === 0 ? "finished" : state.phase,
-        winnerId: nextHands[action.actorId]?.length === 0 ? action.actorId : state.winnerId
+        currentTurn: gameFinished
+          ? null
+          : nextEligiblePlayerId(state.turnOrder, action.actorId, [...state.skippedPlayers, ...finishedPlayerIds]),
+        phase: gameFinished ? "finished" : state.phase,
+        winnerId: playerWentOut ? (state.winnerId ?? action.actorId) : state.winnerId,
+        finishedPlayerIds
       };
 
       return { state: bumpVersion(nextState), validation: { ok: true } };
@@ -188,15 +198,20 @@ export function reduceGameAction(
 
       const currentLeadingPlayer = state.currentLeadingPlay?.playerId;
       const skippedPlayers = [...new Set([...state.skippedPlayers, action.actorId])];
+      const finishedPlayerIds = state.finishedPlayerIds ?? [];
 
       if (
         currentLeadingPlayer !== undefined &&
-        allOtherPlayersSkipped(state.turnOrder, currentLeadingPlayer, skippedPlayers)
+        allOtherPlayersSkipped(state.turnOrder, currentLeadingPlayer, skippedPlayers, finishedPlayerIds)
       ) {
+        const nextLeader = finishedPlayerIds.includes(currentLeadingPlayer)
+          ? nextEligiblePlayerId(state.turnOrder, currentLeadingPlayer, finishedPlayerIds)
+          : currentLeadingPlayer;
+
         return {
           state: bumpVersion({
             ...state,
-            currentTurn: currentLeadingPlayer,
+            currentTurn: nextLeader,
             currentLeadingPlay: null,
             lastEvent: { type: "skip", playerId: action.actorId },
             skippedPlayers: []
@@ -210,7 +225,7 @@ export function reduceGameAction(
           ...state,
           skippedPlayers,
           lastEvent: { type: "skip", playerId: action.actorId },
-          currentTurn: nextPlayerId(state.turnOrder, action.actorId)
+          currentTurn: nextEligiblePlayerId(state.turnOrder, action.actorId, finishedPlayerIds)
         }),
         validation: { ok: true }
       };
