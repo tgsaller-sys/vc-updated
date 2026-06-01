@@ -25,11 +25,14 @@ export interface Card {
 
 export type PlayerId = string;
 
+export type PlayerKind = "human" | "bot";
+
 export interface Player {
   readonly id: PlayerId;
   readonly name: string;
   readonly connected: boolean;
   readonly joinedAt: string;
+  readonly kind?: PlayerKind;
 }
 
 export type CardMoveType = "single" | "pair" | "triple" | "straight" | "bomb";

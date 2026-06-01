@@ -8,6 +8,8 @@ export {
   sortCardsForPlay,
   suits
 } from "./cards";
+export { chooseBotAction, createBotTurnView, isBotPlayer, nextBotAction, runBotTurns } from "./bots";
+export type { BotTurnView } from "./bots";
 export { createShuffledDeck, dealEqually, dealForVc, dealForVcWithMaxCards, shuffleDeck } from "./deck";
 export { reduceGameAction, assertValidTransition } from "./reducer";
 export {
@@ -38,6 +40,7 @@ export type {
   PlayedMove,
   Player,
   PlayerId,
+  PlayerKind,
   PlayValidationResult,
   Rank,
   RuleValidator,

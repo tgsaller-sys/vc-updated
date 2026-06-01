@@ -1,4 +1,4 @@
-import { reduceGameAction, type GameAction, type GameState } from "@vc/game";
+import { nextBotAction, reduceGameAction, type GameAction, type GameState } from "@vc/game";
 import { supabase } from "./client";
 
 function actorIdForAction(action: GameAction): string {
@@ -84,7 +84,7 @@ export async function getRemoteGameByLobbyCode(lobbyCode: string): Promise<GameS
   return data.state;
 }
 
-export async function dispatchValidatedRemoteAction(
+async function persistValidatedRemoteAction(
   state: GameState,
   action: GameAction
 ): Promise<GameState> {
@@ -127,6 +127,25 @@ export async function dispatchValidatedRemoteAction(
   }
 
   return data.state;
+}
+
+export async function dispatchValidatedRemoteAction(
+  state: GameState,
+  action: GameAction
+): Promise<GameState> {
+  let nextState = await persistValidatedRemoteAction(state, action);
+
+  for (let turn = 0; turn < 1000; turn += 1) {
+    const botAction = nextBotAction(nextState);
+
+    if (botAction === null) {
+      return nextState;
+    }
+
+    nextState = await persistValidatedRemoteAction(nextState, botAction);
+  }
+
+  throw new Error("Bot turns exceeded the safety limit.");
 }
 
 export function subscribeToGame(gameId: string, onState: (state: GameState) => void): () => void {

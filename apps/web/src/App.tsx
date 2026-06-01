@@ -5,12 +5,13 @@ import { CardView } from "@vc/ui";
 import {
   isBombPlay,
   reduceGameAction,
+  runBotTurns,
   sortCardsForPlay,
   type GameAction,
   type GameState,
   type Player
 } from "@vc/game";
-import { createDemoGame, createLobbyGame, createPlayer } from "./lib/localGame";
+import { createBotPlayer, createDemoGame, createLobbyGame, createPlayer } from "./lib/localGame";
 import { createLobbyCode } from "./lib/lobbyCode";
 import {
   createRemoteGame,
@@ -32,7 +33,7 @@ function applyAction(state: GameState, action: GameAction): GameState {
     throw new Error(result.validation.reason);
   }
 
-  return result.state;
+  return runBotTurns(result.state);
 }
 
 function pickSkipLabel(): string {
@@ -302,6 +303,14 @@ export function App() {
     void dispatch({ type: "join", player: createPlayer(localPlayerId, preferredPlayerName) });
   }
 
+  function addBot() {
+    const botNumber = game.players.filter((player) => player.kind === "bot").length + 1;
+    void dispatch({
+      type: "join",
+      player: createBotPlayer(`bot-${window.crypto.randomUUID()}`, `Bot ${botNumber}`)
+    });
+  }
+
   function playSelectedCards() {
     void dispatch({ type: "play-cards", actorId: activePlayerId, cardIds: selectedCards.map((card) => card.id) });
   }
@@ -423,7 +432,9 @@ export function App() {
               className={`player-pill ${game.currentTurn === player.id ? "is-turn" : ""}`}
             >
               <Users size={16} aria-hidden="true" />
-              <span>{player.id === localPlayerId ? `${player.name} (you)` : player.name}</span>
+              <span>
+                {player.id === localPlayerId ? `${player.name} (you)` : `${player.name}${player.kind === "bot" ? " (bot)" : ""}`}
+              </span>
               <strong>{game.hands[player.id]?.length ?? 0}</strong>
             </motion.article>
           ))}
@@ -443,6 +454,9 @@ export function App() {
             />
             <button type="button" onClick={savePlayerName}>
               Save Name
+            </button>
+            <button type="button" onClick={addBot}>
+              Add Bot
             </button>
             <button type="button" onClick={() => void createLobby()}>
               Create Lobby

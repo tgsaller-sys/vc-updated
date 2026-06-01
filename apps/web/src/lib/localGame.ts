@@ -14,7 +14,15 @@ export function createPlayer(playerId: string, name: string): Player {
     id: playerId,
     name,
     connected: true,
-    joinedAt: now
+    joinedAt: now,
+    kind: "human"
+  };
+}
+
+export function createBotPlayer(playerId: string, name: string): Player {
+  return {
+    ...createPlayer(playerId, name),
+    kind: "bot"
   };
 }
 
