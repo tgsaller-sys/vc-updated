@@ -35,7 +35,7 @@ export function createLobbyGame(localPlayerId: string, playerName: string, gameI
 
 export function createDemoGame(localPlayerId: string, playerName: string, lobbyCode: string): GameState {
   const localPlayer = createPlayer(localPlayerId, playerName);
-  const guestPlayer = createPlayer("local-guest", "Local Guest");
+  const guestPlayer = createBotPlayer("local-bot", "Local Bot");
 
   const game = createInitialGameState(lobbyCode);
   return [localPlayer, guestPlayer].reduce(

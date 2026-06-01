@@ -1,4 +1,4 @@
-import { nextBotAction, reduceGameAction, type GameAction, type GameState } from "@vc/game";
+import { botTurnDelayMs, nextBotAction, reduceGameAction, type GameAction, type GameState } from "@vc/game";
 import { supabase } from "./client";
 
 function actorIdForAction(action: GameAction): string {
@@ -12,6 +12,10 @@ function actorIdForAction(action: GameAction): string {
     case "skip":
       return action.actorId;
   }
+}
+
+function wait(durationMs: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, durationMs));
 }
 
 export async function signInAnonymously(): Promise<string> {
@@ -142,6 +146,7 @@ export async function dispatchValidatedRemoteAction(
       return nextState;
     }
 
+    await wait(botTurnDelayMs);
     nextState = await persistValidatedRemoteAction(nextState, botAction);
   }
 

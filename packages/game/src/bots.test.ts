@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertValidTransition,
+  botTurnDelayMs,
   chooseEasyBotAction,
   createBotTurnView,
   createDeck,
@@ -45,6 +46,34 @@ function fourSeatGame(): GameState {
 }
 
 describe("computer players", () => {
+  it("waits five seconds before automated turns in browser dispatchers", () => {
+    expect(botTurnDelayMs).toBe(5000);
+  });
+
+  it("returns a local two-seat demo turn from its bot seat to the human", () => {
+    const localPlayers: readonly Player[] = [
+      { id: "human-a", name: "Ada", connected: true, joinedAt: "2026-01-01T00:00:00.000Z", kind: "human" },
+      { id: "local-bot", name: "Local Bot", connected: true, joinedAt: "2026-01-01T00:01:00.000Z", kind: "bot" }
+    ];
+    const state: GameState = {
+      ...createInitialGameState("local-demo-test"),
+      phase: "playing",
+      players: localPlayers,
+      hands: {
+        "human-a": [card("clubs-9")],
+        "local-bot": [card("spades-3"), card("clubs-4")]
+      },
+      currentTurn: "local-bot",
+      turnOrder: localPlayers.map((player) => player.id)
+    };
+
+    const afterBot = runBotTurns(state, { random: () => 0.99 });
+
+    expect(afterBot.currentTurn).toBe("human-a");
+    expect(afterBot.discardPile.at(0)?.playerId).toBe("local-bot");
+    expect(afterBot.discardPile.at(0)?.cards.some((nextCard) => nextCard.id === "spades-3")).toBe(true);
+  });
+
   it("automatically plays the opening turn when a bot is dealt the 3 of spades", () => {
     const lobby = players.reduce(
       (state, player) => assertValidTransition(reduceGameAction(state, { type: "join", player })),

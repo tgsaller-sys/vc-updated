@@ -3,9 +3,10 @@ import { Play, RotateCcw, Send, SkipForward, Users } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CardView } from "@vc/ui";
 import {
+  botTurnDelayMs,
   isBombPlay,
+  nextBotAction,
   reduceGameAction,
-  runBotTurns,
   sortCardsForPlay,
   type GameAction,
   type GameState,
@@ -33,7 +34,7 @@ function applyAction(state: GameState, action: GameAction): GameState {
     throw new Error(result.validation.reason);
   }
 
-  return runBotTurns(result.state);
+  return result.state;
 }
 
 function pickSkipLabel(): string {
@@ -266,6 +267,26 @@ export function App() {
       setError(null);
     });
   }, [game.id, setError, syncMode]);
+
+  useEffect(() => {
+    if (syncMode !== "local") {
+      return undefined;
+    }
+
+    const botAction = nextBotAction(game);
+
+    if (botAction === null) {
+      return undefined;
+    }
+
+    const botName = game.players.find((player) => player.id === game.currentTurn)?.name ?? "Bot";
+    setActionStatus(`${botName} is thinking...`);
+    const timeoutId = window.setTimeout(() => {
+      void dispatch(botAction);
+    }, botTurnDelayMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [game, syncMode]);
 
   async function dispatch(action: GameAction) {
     try {
