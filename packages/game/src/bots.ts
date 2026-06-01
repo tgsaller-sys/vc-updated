@@ -11,8 +11,17 @@ export interface BotTurnView {
   readonly requiredOpeningCard?: Card;
 }
 
+export interface EasyBotOptions {
+  readonly random?: () => number;
+  readonly passProbability?: number;
+}
+
 export function isBotPlayer(player: Player | undefined): boolean {
   return player?.kind === "bot";
+}
+
+function randomIndex(length: number, random: () => number): number {
+  return Math.min(Math.floor(random() * length), length - 1);
 }
 
 /**
@@ -35,16 +44,28 @@ export function createBotTurnView(state: GameState, actorId: PlayerId): BotTurnV
 }
 
 /**
- * Chooses a deterministic action from legal moves computed with the shared VC rules.
+ * Chooses an EasyBot action from legal moves computed with the shared VC rules.
  */
-export function chooseBotAction(view: BotTurnView): GameAction {
+export function chooseEasyBotAction(view: BotTurnView, options: EasyBotOptions = {}): GameAction {
+  const random = options.random ?? Math.random;
+  const passProbability = options.passProbability ?? 0.25;
   const moves = getLegalMoves({
     hand: view.hand,
     currentTablePlay: view.currentTablePlay,
     isLeading: view.isLeading,
     options: view.requiredOpeningCard === undefined ? {} : { requiredOpeningCard: view.requiredOpeningCard }
   });
-  const play = moves.find((move) => move.type !== "pass");
+  const plays = moves.filter((move) => move.type !== "pass");
+  const winningPlays = plays.filter((move) => move.cards.length === view.hand.length);
+  const availablePlays = winningPlays.length > 0 ? winningPlays : plays;
+
+  if (!view.isLeading && winningPlays.length === 0 && moves.some((move) => move.type === "pass")) {
+    if (random() < passProbability) {
+      return { type: "skip", actorId: view.actorId };
+    }
+  }
+
+  const play = availablePlays.length === 0 ? undefined : availablePlays[randomIndex(availablePlays.length, random)];
 
   if (play !== undefined) {
     return {
@@ -57,7 +78,11 @@ export function chooseBotAction(view: BotTurnView): GameAction {
   return { type: "skip", actorId: view.actorId };
 }
 
-export function nextBotAction(state: GameState): GameAction | null {
+export function chooseBotAction(view: BotTurnView, options: EasyBotOptions = {}): GameAction {
+  return chooseEasyBotAction(view, options);
+}
+
+export function nextBotAction(state: GameState, options: EasyBotOptions = {}): GameAction | null {
   if (state.phase !== "playing" || state.currentTurn === null) {
     return null;
   }
@@ -72,17 +97,17 @@ export function nextBotAction(state: GameState): GameAction | null {
     return { type: "skip", actorId: state.currentTurn };
   }
 
-  return chooseBotAction(createBotTurnView(state, state.currentTurn));
+  return chooseBotAction(createBotTurnView(state, state.currentTurn), options);
 }
 
 /**
  * Advances local games through consecutive bot seats via the authoritative reducer.
  */
-export function runBotTurns(state: GameState): GameState {
+export function runBotTurns(state: GameState, options: EasyBotOptions = {}): GameState {
   let nextState = state;
 
   for (let turn = 0; turn < 1000; turn += 1) {
-    const action = nextBotAction(nextState);
+    const action = nextBotAction(nextState, options);
 
     if (action === null) {
       return nextState;

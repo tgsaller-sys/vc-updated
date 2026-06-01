@@ -8,8 +8,8 @@ export {
   sortCardsForPlay,
   suits
 } from "./cards";
-export { chooseBotAction, createBotTurnView, isBotPlayer, nextBotAction, runBotTurns } from "./bots";
-export type { BotTurnView } from "./bots";
+export { chooseBotAction, chooseEasyBotAction, createBotTurnView, isBotPlayer, nextBotAction, runBotTurns } from "./bots";
+export type { BotTurnView, EasyBotOptions } from "./bots";
 export { createShuffledDeck, dealEqually, dealForVc, dealForVcWithMaxCards, shuffleDeck } from "./deck";
 export { reduceGameAction, assertValidTransition } from "./reducer";
 export {

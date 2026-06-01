@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertValidTransition,
+  chooseEasyBotAction,
   createBotTurnView,
   createDeck,
   createInitialGameState,
@@ -53,17 +54,17 @@ describe("computer players", () => {
       })
     );
 
-    const afterBots = runBotTurns(afterHuman);
+    const afterBots = runBotTurns(afterHuman, { random: () => 0.99 });
 
     expect(afterBots.currentTurn).toBe("human-b");
     expect(afterBots.discardPile.map((play) => play.playerId)).toEqual(["human-a", "bot-a", "bot-b"]);
     expect(afterBots.discardPile.map((play) => play.cards.map((nextCard) => nextCard.id))).toEqual([
       ["spades-3"],
-      ["clubs-4"],
-      ["diamonds-5"]
+      ["clubs-8"],
+      ["diamonds-8"]
     ]);
-    expect(afterBots.hands["bot-a"]?.map((nextCard) => nextCard.id)).toEqual(["clubs-8"]);
-    expect(afterBots.hands["bot-b"]?.map((nextCard) => nextCard.id)).toEqual(["diamonds-8"]);
+    expect(afterBots.hands["bot-a"]?.map((nextCard) => nextCard.id)).toEqual(["clubs-4"]);
+    expect(afterBots.hands["bot-b"]?.map((nextCard) => nextCard.id)).toEqual(["diamonds-5"]);
     expect(afterBots.version).toBe(afterHuman.version + 2);
   });
 
@@ -134,5 +135,79 @@ describe("computer players", () => {
     };
 
     expect(nextBotAction(state)).toEqual({ type: "skip", actorId: "bot-a" });
+  });
+
+  it("chooses randomly among legal non-pass responses with injected randomness", () => {
+    const action = chooseEasyBotAction(
+      {
+        actorId: "bot-a",
+        hand: [card("clubs-4"), card("diamonds-5"), card("hearts-6")],
+        currentTablePlay: {
+          type: "single",
+          cards: [card("spades-3")],
+          primaryRank: "3",
+          highCard: card("spades-3"),
+          length: 1
+        },
+        isLeading: false
+      },
+      { random: () => 0.99, passProbability: 0 }
+    );
+
+    expect(action).toEqual({ type: "play-cards", actorId: "bot-a", cardIds: ["hearts-6"] });
+  });
+
+  it("sometimes passes while responding even when a legal play exists", () => {
+    const action = chooseEasyBotAction(
+      {
+        actorId: "bot-a",
+        hand: [card("clubs-4"), card("clubs-8")],
+        currentTablePlay: {
+          type: "single",
+          cards: [card("spades-3")],
+          primaryRank: "3",
+          highCard: card("spades-3"),
+          length: 1
+        },
+        isLeading: false
+      },
+      { random: () => 0, passProbability: 0.25 }
+    );
+
+    expect(action).toEqual({ type: "skip", actorId: "bot-a" });
+  });
+
+  it("never passes when a legal move wins the game", () => {
+    const action = chooseEasyBotAction(
+      {
+        actorId: "bot-a",
+        hand: [card("clubs-4")],
+        currentTablePlay: {
+          type: "single",
+          cards: [card("spades-3")],
+          primaryRank: "3",
+          highCard: card("spades-3"),
+          length: 1
+        },
+        isLeading: false
+      },
+      { random: () => 0, passProbability: 1 }
+    );
+
+    expect(action).toEqual({ type: "play-cards", actorId: "bot-a", cardIds: ["clubs-4"] });
+  });
+
+  it("never passes while leading and still returns a legal play", () => {
+    const action = chooseEasyBotAction(
+      {
+        actorId: "bot-a",
+        hand: [card("clubs-4"), card("diamonds-5")],
+        currentTablePlay: null,
+        isLeading: true
+      },
+      { random: () => 0, passProbability: 1 }
+    );
+
+    expect(action).toEqual({ type: "play-cards", actorId: "bot-a", cardIds: ["clubs-4"] });
   });
 });
