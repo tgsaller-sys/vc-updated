@@ -26,6 +26,7 @@ export {
   allowAnyOwnedCards,
   getBombMoves,
   getLegalMoves,
+  getLegalMovesForPlayer,
   identifyCardMove,
   isBombMove,
   isBombPlay,

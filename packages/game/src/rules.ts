@@ -382,6 +382,27 @@ function openingCardForState(state: GameState): Card | null {
   return cards.find((card) => card.id === "spades-3") ?? sortCardsForPlay(cards).at(0) ?? null;
 }
 
+/**
+ * Returns legal moves for the active player with state-level turn and opening rules applied.
+ */
+export function getLegalMovesForPlayer(state: GameState, actorId: PlayerId): readonly Move[] {
+  if (state.phase !== "playing" || state.currentTurn !== actorId || state.skippedPlayers.includes(actorId)) {
+    return [];
+  }
+
+  const requiredOpeningCard =
+    state.discardPile.length === 0 && state.currentLeadingPlay === null
+      ? (openingCardForState(state) ?? undefined)
+      : undefined;
+
+  return getLegalMoves({
+    hand: state.hands[actorId] ?? [],
+    currentTablePlay: state.currentLeadingPlay,
+    isLeading: state.currentLeadingPlay === null,
+    options: requiredOpeningCard === undefined ? {} : { requiredOpeningCard }
+  });
+}
+
 export const validateVcPlay: RuleValidator = (state, _actorId, cards) => {
   let requiredOpeningCard: Card | undefined;
   if (state.discardPile.length === 0 && state.currentLeadingPlay === null) {

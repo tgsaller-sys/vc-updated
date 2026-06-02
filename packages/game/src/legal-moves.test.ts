@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createDeck, getLegalMoves, identifyCardMove } from ".";
-import type { Card, CardId, CardMove, Move } from ".";
+import { createDeck, createInitialGameState, getLegalMoves, getLegalMovesForPlayer, identifyCardMove } from ".";
+import type { Card, CardId, CardMove, GameState, Move } from ".";
 
 function card(id: CardId): Card {
   const found = createDeck().find((nextCard) => nextCard.id === id);
@@ -213,5 +213,51 @@ describe("getLegalMoves", () => {
 
     expect(first).toEqual(second);
     expect(JSON.stringify({ hand, currentTablePlay })).toBe(before);
+  });
+});
+
+describe("getLegalMovesForPlayer", () => {
+  it("returns only pass when the active player cannot beat the table", () => {
+    const state: GameState = {
+      ...createInitialGameState("no-legal-play"),
+      phase: "playing",
+      hands: {
+        "player-a": [card("clubs-4")],
+        "player-b": [card("hearts-5")]
+      },
+      currentTurn: "player-a",
+      currentLeadingPlay: {
+        playerId: "player-b",
+        ...move([card("hearts-5")])
+      },
+      turnOrder: ["player-a", "player-b"]
+    };
+
+    expect(getLegalMovesForPlayer(state, "player-a")).toEqual([
+      {
+        type: "pass",
+        cards: [],
+        primaryRank: null,
+        highCard: null,
+        length: 0
+      }
+    ]);
+  });
+
+  it("applies the required opening card and ignores players who cannot act", () => {
+    const state: GameState = {
+      ...createInitialGameState("opening-legal-play"),
+      phase: "playing",
+      hands: {
+        "player-a": [card("spades-3"), card("clubs-4")],
+        "player-b": [card("diamonds-5")]
+      },
+      currentTurn: "player-a",
+      turnOrder: ["player-a", "player-b"]
+    };
+
+    expect(playIds(getLegalMovesForPlayer(state, "player-a"))).toEqual([["spades-3"]]);
+    expect(getLegalMovesForPlayer(state, "player-b")).toEqual([]);
+    expect(getLegalMovesForPlayer({ ...state, skippedPlayers: ["player-a"] }, "player-a")).toEqual([]);
   });
 });

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CardView } from "@vc/ui";
 import {
   botTurnDelayMs,
+  getLegalMovesForPlayer,
   isBombPlay,
   maxPlayers,
   nextBotAction,
@@ -192,6 +193,12 @@ export function App() {
   const selectedCards = useMemo(
     () => sortedActiveHand.filter((card) => selectedCardIds.includes(card.id)),
     [selectedCardIds, sortedActiveHand]
+  );
+  const hasLegalCardPlay = useMemo(
+    () =>
+      !canUseHumanControls ||
+      getLegalMovesForPlayer(game, activePlayerId).some((move) => move.type !== "pass"),
+    [activePlayerId, canUseHumanControls, game]
   );
   const showBombCallout =
     game.currentLeadingPlay !== null && isBombPlay(game.currentLeadingPlay.cards) && game.currentLeadingPlay.cards.length > 1;
@@ -700,6 +707,12 @@ export function App() {
               </button>
             ) : null}
           </div>
+
+          {canUseHumanControls && !hasLegalCardPlay ? (
+            <p className="no-legal-play-text">
+              No legal play available.{game.currentLeadingPlay === null ? "" : " Pass to continue."}
+            </p>
+          ) : null}
 
           <motion.div layout className="hand">
             {sortedActiveHand.map((card) => (

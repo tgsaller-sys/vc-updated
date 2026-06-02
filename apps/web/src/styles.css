@@ -406,7 +406,8 @@ button {
 
 .error-text,
 .winner-text,
-.notice-text {
+.notice-text,
+.no-legal-play-text {
   margin: 0;
   font-weight: 800;
 }
@@ -421,6 +422,10 @@ button {
 
 .notice-text {
   color: #3e4856;
+}
+
+.no-legal-play-text {
+  color: #7a4c11;
 }
 
 @media (max-width: 680px) {
@@ -652,7 +657,8 @@ button {
 
   .notice-text,
   .error-text,
-  .winner-text {
+  .winner-text,
+  .no-legal-play-text {
     font-size: 0.84rem;
   }
 }
