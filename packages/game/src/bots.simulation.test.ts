@@ -1,0 +1,130 @@
+import { describe, expect, it } from "vitest";
+import { assertValidTransition, createInitialGameState, nextBotAction, reduceGameAction } from ".";
+import type { BotStrategy, GameAction, GameState, Player, PlayerId } from ".";
+
+const simulationCount = 100;
+const maximumActionsPerGame = 1000;
+
+function createSeededRandom(seed: number): () => number {
+  let state = seed >>> 0;
+
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+}
+
+function createBotPlayers(): readonly Player[] {
+  return Array.from({ length: 4 }, (_value, index) => {
+    const botNumber = index + 1;
+    const botStrategy: BotStrategy = index % 2 === 0 ? "easy" : "medium";
+
+    return {
+      id: `bot-${botNumber}`,
+      name: `${botStrategy === "easy" ? "Easy" : "Medium"} Bot ${botNumber}`,
+      connected: true,
+      joinedAt: `2026-01-01T00:0${index}:00.000Z`,
+      kind: "bot",
+      botStrategy
+    };
+  });
+}
+
+function summarizeAction(action: GameAction): string {
+  switch (action.type) {
+    case "play-cards":
+      return `${action.actorId} plays ${action.cardIds.join(",")}`;
+    case "skip":
+      return `${action.actorId} skips`;
+    case "join":
+      return `${action.player.id} joins`;
+    case "remove-player":
+      return `${action.playerId} leaves`;
+    case "set-connection":
+      return `${action.playerId} connection=${action.connected}`;
+    case "start":
+      return `${action.actorId} starts seed=${action.seed}`;
+  }
+}
+
+function summarizeState(state: GameState): string {
+  const handCounts = state.turnOrder.map((playerId) => `${playerId}:${state.hands[playerId]?.length ?? 0}`).join(" ");
+  const finishedPlayers = (state.finishedPlayerIds ?? []).join(",");
+  const tablePlay =
+    state.currentLeadingPlay === null
+      ? "open"
+      : `${state.currentLeadingPlay.playerId}:${state.currentLeadingPlay.type}:${state.currentLeadingPlay.cards
+          .map((card) => card.id)
+          .join(",")}`;
+
+  return `phase=${state.phase} turn=${state.currentTurn ?? "none"} hands=[${handCounts}] finished=[${finishedPlayers}] table=${tablePlay}`;
+}
+
+function simulationFailure(seed: number, message: string, state: GameState, transcript: readonly string[]): Error {
+  return new Error(
+    [`Simulation seed ${seed} failed: ${message}`, summarizeState(state), "Transcript:", ...transcript].join("\n")
+  );
+}
+
+function finishOrder(state: GameState): readonly PlayerId[] {
+  const finishedPlayers = state.finishedPlayerIds ?? [];
+  return [...finishedPlayers, ...state.turnOrder.filter((playerId) => !finishedPlayers.includes(playerId))];
+}
+
+function simulateGame(seed: number): GameState {
+  const players = createBotPlayers();
+  const random = createSeededRandom(seed ^ 0x9e3779b9);
+  const lobby = players.reduce(
+    (state, player) => assertValidTransition(reduceGameAction(state, { type: "join", player })),
+    createInitialGameState(`bot-simulation-${seed}`)
+  );
+  let state = assertValidTransition(
+    reduceGameAction(lobby, { type: "start", actorId: players[0]?.id ?? "bot-1", seed })
+  );
+  const transcript: string[] = [`START ${summarizeState(state)}`];
+
+  for (let actionNumber = 1; actionNumber <= maximumActionsPerGame; actionNumber += 1) {
+    if (state.phase === "finished") {
+      return state;
+    }
+
+    const action = nextBotAction(state, { random });
+
+    if (action === null) {
+      throw simulationFailure(seed, "No bot action was available before the game finished.", state, transcript);
+    }
+
+    const transition = reduceGameAction(state, action);
+    transcript.push(`${actionNumber}. ${summarizeAction(action)} => ${summarizeState(transition.state)}`);
+
+    if (!transition.validation.ok) {
+      throw simulationFailure(
+        seed,
+        `Illegal action: ${transition.validation.reason}`,
+        state,
+        transcript
+      );
+    }
+
+    state = transition.state;
+  }
+
+  throw simulationFailure(seed, `Exceeded ${maximumActionsPerGame} actions.`, state, transcript);
+}
+
+describe("four-bot game simulations", () => {
+  it(`completes ${simulationCount} full games without illegal moves or infinite loops`, () => {
+    for (let seed = 0; seed < simulationCount; seed += 1) {
+      const finalState = simulateGame(seed);
+      const order = finishOrder(finalState);
+
+      expect(finalState.phase, `seed ${seed}`).toBe("finished");
+      expect(finalState.currentTurn, `seed ${seed}`).toBeNull();
+      expect(finalState.winnerId, `seed ${seed}`).toBe(order[0]);
+      expect(order, `seed ${seed}`).toHaveLength(4);
+      expect(new Set(order).size, `seed ${seed}`).toBe(4);
+      expect(order.every((playerId) => finalState.turnOrder.includes(playerId)), `seed ${seed}`).toBe(true);
+      expect((finalState.finishedPlayerIds ?? []).every((playerId) => finalState.hands[playerId]?.length === 0), `seed ${seed}`).toBe(true);
+    }
+  });
+});
