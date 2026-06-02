@@ -102,6 +102,14 @@ function compareMovesForCost(left: CardMove, right: CardMove): number {
   return right.length - left.length;
 }
 
+function compareMovesForBlocking(left: CardMove, right: CardMove): number {
+  if (left.length !== right.length) {
+    return right.length - left.length;
+  }
+
+  return compareCardsForPlay(right.highCard, left.highCard);
+}
+
 function isVeryStrongMove(move: CardMove): boolean {
   return move.type === "bomb" || move.cards.some((card) => card.rank === "2");
 }
@@ -159,6 +167,9 @@ export function chooseMediumBotAction(view: BotTurnView): GameAction {
   });
   const plays = moves.filter((move): move is CardMove => move.type !== "pass");
   const protectedIds = protectedComboCardIds(view.hand);
+  const opponentHasOneCard = view.opponentCardCounts.some((count) => count === 1);
+  const opponentCloseToGoingOut = view.opponentCardCounts.some((count) => count >= 1 && count <= 3);
+  const botCanGoOutSoon = view.hand.length <= 3;
   const winningPlays = plays.filter((move) => move.cards.length === view.hand.length).sort(compareMovesForCost);
 
   if (winningPlays[0] !== undefined) {
@@ -167,28 +178,30 @@ export function chooseMediumBotAction(view: BotTurnView): GameAction {
 
   if (!view.isLeading) {
     const ordinaryPlays = plays.filter((move) => !spendsProtectedCards(move, protectedIds));
-    const availablePlays = ordinaryPlays.length > 0 ? ordinaryPlays : plays;
-    const cheapestPlay = [...availablePlays].sort(compareMovesForCost)[0];
-    const opponentCloseToGoingOut = view.opponentCardCounts.some((count) => count <= 2);
+    const availablePlays = opponentHasOneCard || ordinaryPlays.length === 0 ? plays : ordinaryPlays;
+    const selectedPlay = [...availablePlays].sort(opponentHasOneCard ? compareMovesForBlocking : compareMovesForCost)[0];
 
-    if (cheapestPlay === undefined || (spendsProtectedCards(cheapestPlay, protectedIds) && !opponentCloseToGoingOut)) {
+    if (
+      selectedPlay === undefined ||
+      (spendsProtectedCards(selectedPlay, protectedIds) && !opponentCloseToGoingOut && !botCanGoOutSoon)
+    ) {
       return { type: "skip", actorId: view.actorId };
     }
 
-    return actionForPlay(view.actorId, cheapestPlay);
+    return actionForPlay(view.actorId, selectedPlay);
   }
 
   const preservedPlays = plays.filter((move) => !spendsProtectedCards(move, protectedIds));
   const availablePlays = preservedPlays.length > 0 ? preservedPlays : plays;
   const combinations = availablePlays.filter((move) => move.length > 1);
   const preferredPlays = combinations.length > 0 ? combinations : availablePlays;
-  const cheapestPlay = [...preferredPlays].sort(compareMovesForCost)[0];
+  const selectedPlay = [...preferredPlays].sort(opponentHasOneCard ? compareMovesForBlocking : compareMovesForCost)[0];
 
-  if (cheapestPlay === undefined) {
+  if (selectedPlay === undefined) {
     return { type: "skip", actorId: view.actorId };
   }
 
-  return actionForPlay(view.actorId, cheapestPlay);
+  return actionForPlay(view.actorId, selectedPlay);
 }
 
 export function chooseBotAction(view: BotTurnView, options: EasyBotOptions = {}): GameAction {

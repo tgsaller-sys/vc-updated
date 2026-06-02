@@ -294,7 +294,7 @@ describe("computer players", () => {
   it("has MediumBot pass rather than spend a 2 when no opponent is close to going out", () => {
     const action = chooseMediumBotAction({
       actorId: "bot-a",
-      hand: [card("clubs-4"), card("spades-2")],
+      hand: [card("clubs-4"), card("diamonds-5"), card("hearts-6"), card("spades-2")],
       currentTablePlay: {
         type: "single",
         cards: [card("hearts-A")],
@@ -321,10 +321,46 @@ describe("computer players", () => {
         length: 1
       },
       isLeading: false,
-      opponentCardCounts: [2, 5]
+      opponentCardCounts: [3, 5]
     });
 
     expect(action).toEqual({ type: "play-cards", actorId: "bot-a", cardIds: ["spades-2"] });
+  });
+
+  it("has MediumBot spend a 2 when it can go out soon", () => {
+    const action = chooseMediumBotAction({
+      actorId: "bot-a",
+      hand: [card("clubs-4"), card("spades-2")],
+      currentTablePlay: {
+        type: "single",
+        cards: [card("hearts-A")],
+        primaryRank: "A",
+        highCard: card("hearts-A"),
+        length: 1
+      },
+      isLeading: false,
+      opponentCardCounts: [4, 5]
+    });
+
+    expect(action).toEqual({ type: "play-cards", actorId: "bot-a", cardIds: ["spades-2"] });
+  });
+
+  it("has MediumBot block a one-card opponent with its strongest legal response", () => {
+    const action = chooseMediumBotAction({
+      actorId: "bot-a",
+      hand: [card("clubs-4"), card("diamonds-5"), card("hearts-K")],
+      currentTablePlay: {
+        type: "single",
+        cards: [card("spades-3")],
+        primaryRank: "3",
+        highCard: card("spades-3"),
+        length: 1
+      },
+      isLeading: false,
+      opponentCardCounts: [1, 5]
+    });
+
+    expect(action).toEqual({ type: "play-cards", actorId: "bot-a", cardIds: ["hearts-K"] });
   });
 
   it("has MediumBot preserve a double-straight chop when no opponent is close to going out", () => {
@@ -351,6 +387,36 @@ describe("computer players", () => {
     });
 
     expect(action).toEqual({ type: "skip", actorId: "bot-a" });
+  });
+
+  it("has MediumBot spend a double-straight chop to stop a one-card opponent", () => {
+    const action = chooseMediumBotAction({
+      actorId: "bot-a",
+      hand: [
+        card("spades-4"),
+        card("clubs-4"),
+        card("spades-5"),
+        card("clubs-5"),
+        card("spades-6"),
+        card("clubs-6"),
+        card("diamonds-9")
+      ],
+      currentTablePlay: {
+        type: "single",
+        cards: [card("spades-2")],
+        primaryRank: "2",
+        highCard: card("spades-2"),
+        length: 1
+      },
+      isLeading: false,
+      opponentCardCounts: [1, 5]
+    });
+
+    expect(action).toEqual({
+      type: "play-cards",
+      actorId: "bot-a",
+      cardIds: ["spades-4", "clubs-4", "spades-5", "clubs-5", "spades-6", "clubs-6"]
+    });
   });
 
   it("has MediumBot lead a low combination to reduce its hand size", () => {
