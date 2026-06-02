@@ -15,6 +15,7 @@ export {
   chooseMediumBotAction,
   createBotTurnView,
   isBotPlayer,
+  maximumAutomaticBotTurns,
   nextBotAction,
   runBotTurns
 } from "./bots";
@@ -23,6 +24,7 @@ export { createShuffledDeck, dealEqually, dealForVc, dealForVcWithMaxCards, shuf
 export { reduceGameAction, assertValidTransition, maxPlayers } from "./reducer";
 export {
   allowAnyOwnedCards,
+  getBombMoves,
   getLegalMoves,
   identifyCardMove,
   isBombMove,

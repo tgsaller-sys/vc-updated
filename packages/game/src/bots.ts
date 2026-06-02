@@ -1,30 +1,17 @@
-import { compareCardsForPlay, rankValue, sortCardsForPlay } from "./cards";
+import { sortCardsForPlay } from "./cards";
 import { reduceGameAction } from "./reducer";
-import { getLegalMoves } from "./rules";
-import type { Card, CardMove, GameAction, GameState, Player, PlayerId } from "./types";
+import { chooseEasyBotAction, chooseMediumBotAction } from "./botStrategies";
+import type { BotTurnView, EasyBotOptions } from "./botStrategies";
+import type { GameAction, GameState, Player, PlayerId } from "./types";
 
-export interface BotTurnView {
-  readonly actorId: PlayerId;
-  readonly hand: readonly Card[];
-  readonly currentTablePlay: CardMove | null;
-  readonly isLeading: boolean;
-  readonly opponentCardCounts: readonly number[];
-  readonly requiredOpeningCard?: Card;
-}
-
-export interface EasyBotOptions {
-  readonly random?: () => number;
-  readonly passProbability?: number;
-}
+export { chooseBotAction, chooseEasyBotAction, chooseMediumBotAction } from "./botStrategies";
+export type { BotTurnView, EasyBotOptions } from "./botStrategies";
 
 export const botTurnDelayMs = 2000;
+export const maximumAutomaticBotTurns = 1000;
 
-export function isBotPlayer(player: Player | undefined): boolean {
+export function isBotPlayer(player: Player | undefined): player is Player & { readonly kind: "bot" } {
   return player?.kind === "bot";
-}
-
-function randomIndex(length: number, random: () => number): number {
-  return Math.min(Math.floor(random() * length), length - 1);
 }
 
 /**
@@ -49,165 +36,6 @@ export function createBotTurnView(state: GameState, actorId: PlayerId): BotTurnV
   };
 }
 
-/**
- * Chooses an EasyBot action from legal moves computed with the shared VC rules.
- */
-export function chooseEasyBotAction(view: BotTurnView, options: EasyBotOptions = {}): GameAction {
-  const random = options.random ?? Math.random;
-  const passProbability = options.passProbability ?? 0.25;
-  const moves = getLegalMoves({
-    hand: view.hand,
-    currentTablePlay: view.currentTablePlay,
-    isLeading: view.isLeading,
-    options: view.requiredOpeningCard === undefined ? {} : { requiredOpeningCard: view.requiredOpeningCard }
-  });
-  const plays = moves.filter((move) => move.type !== "pass");
-  const winningPlays = plays.filter((move) => move.cards.length === view.hand.length);
-  const availablePlays = winningPlays.length > 0 ? winningPlays : plays;
-
-  if (!view.isLeading && winningPlays.length === 0 && moves.some((move) => move.type === "pass")) {
-    if (random() < passProbability) {
-      return { type: "skip", actorId: view.actorId };
-    }
-  }
-
-  const play = availablePlays.length === 0 ? undefined : availablePlays[randomIndex(availablePlays.length, random)];
-
-  if (play !== undefined) {
-    return {
-      type: "play-cards",
-      actorId: view.actorId,
-      cardIds: play.cards.map((card) => card.id)
-    };
-  }
-
-  return { type: "skip", actorId: view.actorId };
-}
-
-function actionForPlay(actorId: PlayerId, play: CardMove): GameAction {
-  return {
-    type: "play-cards",
-    actorId,
-    cardIds: play.cards.map((card) => card.id)
-  };
-}
-
-function compareMovesForCost(left: CardMove, right: CardMove): number {
-  const highCardDifference = compareCardsForPlay(left.highCard, right.highCard);
-
-  if (highCardDifference !== 0) {
-    return highCardDifference;
-  }
-
-  return right.length - left.length;
-}
-
-function compareMovesForBlocking(left: CardMove, right: CardMove): number {
-  if (left.length !== right.length) {
-    return right.length - left.length;
-  }
-
-  return compareCardsForPlay(right.highCard, left.highCard);
-}
-
-function isVeryStrongMove(move: CardMove): boolean {
-  return move.type === "bomb" || move.cards.some((card) => card.rank === "2");
-}
-
-function protectedComboCardIds(hand: readonly Card[]): ReadonlySet<Card["id"]> {
-  const byRank = new Map<Card["rank"], readonly Card[]>();
-  const protectedIds = new Set<Card["id"]>();
-
-  for (const card of hand) {
-    byRank.set(card.rank, [...(byRank.get(card.rank) ?? []), card]);
-  }
-
-  for (const cards of byRank.values()) {
-    if (cards.length === 4) {
-      cards.forEach((card) => protectedIds.add(card.id));
-    }
-  }
-
-  const ranksWithPairs = [...byRank.entries()]
-    .filter(([rank, cards]) => rank !== "2" && cards.length >= 2)
-    .sort(([leftRank], [rightRank]) => rankValue(leftRank) - rankValue(rightRank));
-
-  for (let start = 0; start < ranksWithPairs.length; start += 1) {
-    for (let end = start + 3; end <= ranksWithPairs.length; end += 1) {
-      const run = ranksWithPairs.slice(start, end);
-      const isConsecutive = run.every(([rank], index) => {
-        const previous = run[index - 1];
-        return index === 0 || (previous !== undefined && rankValue(rank) === rankValue(previous[0]) + 1);
-      });
-
-      if (!isConsecutive) {
-        break;
-      }
-
-      run.forEach(([, cards]) => cards.forEach((card) => protectedIds.add(card.id)));
-    }
-  }
-
-  return protectedIds;
-}
-
-function spendsProtectedCards(move: CardMove, protectedIds: ReadonlySet<Card["id"]>): boolean {
-  return isVeryStrongMove(move) || move.cards.some((card) => protectedIds.has(card.id));
-}
-
-/**
- * Chooses a conservative MediumBot action using legal moves and public hand sizes.
- */
-export function chooseMediumBotAction(view: BotTurnView): GameAction {
-  const moves = getLegalMoves({
-    hand: view.hand,
-    currentTablePlay: view.currentTablePlay,
-    isLeading: view.isLeading,
-    options: view.requiredOpeningCard === undefined ? {} : { requiredOpeningCard: view.requiredOpeningCard }
-  });
-  const plays = moves.filter((move): move is CardMove => move.type !== "pass");
-  const protectedIds = protectedComboCardIds(view.hand);
-  const opponentHasOneCard = view.opponentCardCounts.some((count) => count === 1);
-  const opponentCloseToGoingOut = view.opponentCardCounts.some((count) => count >= 1 && count <= 3);
-  const botCanGoOutSoon = view.hand.length <= 3;
-  const winningPlays = plays.filter((move) => move.cards.length === view.hand.length).sort(compareMovesForCost);
-
-  if (winningPlays[0] !== undefined) {
-    return actionForPlay(view.actorId, winningPlays[0]);
-  }
-
-  if (!view.isLeading) {
-    const ordinaryPlays = plays.filter((move) => !spendsProtectedCards(move, protectedIds));
-    const availablePlays = opponentHasOneCard || ordinaryPlays.length === 0 ? plays : ordinaryPlays;
-    const selectedPlay = [...availablePlays].sort(opponentHasOneCard ? compareMovesForBlocking : compareMovesForCost)[0];
-
-    if (
-      selectedPlay === undefined ||
-      (spendsProtectedCards(selectedPlay, protectedIds) && !opponentCloseToGoingOut && !botCanGoOutSoon)
-    ) {
-      return { type: "skip", actorId: view.actorId };
-    }
-
-    return actionForPlay(view.actorId, selectedPlay);
-  }
-
-  const preservedPlays = plays.filter((move) => !spendsProtectedCards(move, protectedIds));
-  const availablePlays = preservedPlays.length > 0 ? preservedPlays : plays;
-  const combinations = availablePlays.filter((move) => move.length > 1);
-  const preferredPlays = combinations.length > 0 ? combinations : availablePlays;
-  const selectedPlay = [...preferredPlays].sort(opponentHasOneCard ? compareMovesForBlocking : compareMovesForCost)[0];
-
-  if (selectedPlay === undefined) {
-    return { type: "skip", actorId: view.actorId };
-  }
-
-  return actionForPlay(view.actorId, selectedPlay);
-}
-
-export function chooseBotAction(view: BotTurnView, options: EasyBotOptions = {}): GameAction {
-  return chooseEasyBotAction(view, options);
-}
-
 export function nextBotAction(state: GameState, options: EasyBotOptions = {}): GameAction | null {
   if (state.phase !== "playing" || state.currentTurn === null) {
     return null;
@@ -224,7 +52,7 @@ export function nextBotAction(state: GameState, options: EasyBotOptions = {}): G
   }
 
   const view = createBotTurnView(state, state.currentTurn);
-  return player?.botStrategy === "medium" ? chooseMediumBotAction(view) : chooseBotAction(view, options);
+  return player.botStrategy === "medium" ? chooseMediumBotAction(view) : chooseEasyBotAction(view, options);
 }
 
 /**
@@ -233,7 +61,7 @@ export function nextBotAction(state: GameState, options: EasyBotOptions = {}): G
 export function runBotTurns(state: GameState, options: EasyBotOptions = {}): GameState {
   let nextState = state;
 
-  for (let turn = 0; turn < 1000; turn += 1) {
+  for (let turn = 0; turn < maximumAutomaticBotTurns; turn += 1) {
     const action = nextBotAction(nextState, options);
 
     if (action === null) {

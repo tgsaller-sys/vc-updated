@@ -1,4 +1,11 @@
-import { botTurnDelayMs, nextBotAction, reduceGameAction, type GameAction, type GameState } from "@vc/game";
+import {
+  botTurnDelayMs,
+  maximumAutomaticBotTurns,
+  nextBotAction,
+  reduceGameAction,
+  type GameAction,
+  type GameState
+} from "@vc/game";
 import { supabase } from "./client";
 
 function actorIdForAction(action: GameAction): string {
@@ -140,7 +147,7 @@ export async function dispatchValidatedRemoteAction(
 ): Promise<GameState> {
   let nextState = await persistValidatedRemoteAction(state, action);
 
-  for (let turn = 0; turn < 1000; turn += 1) {
+  for (let turn = 0; turn < maximumAutomaticBotTurns; turn += 1) {
     const botAction = nextBotAction(nextState);
 
     if (botAction === null) {

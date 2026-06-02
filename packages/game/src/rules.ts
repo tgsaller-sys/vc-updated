@@ -339,6 +339,16 @@ function candidatePlays(hand: readonly Card[]): readonly (readonly Card[])[] {
 }
 
 /**
+ * Returns every bomb available in a hand so strategies can reason about them
+ * without duplicating the rules for quads and double straights.
+ */
+export function getBombMoves(hand: readonly Card[]): readonly CardMove[] {
+  return candidatePlays(hand)
+    .map((cards) => identifyCardMove(cards))
+    .filter((move): move is CardMove => move !== null && isBombMove(move));
+}
+
+/**
  * Returns every legal VC play for a hand in deterministic card order.
  * The function is pure so clients can safely use it for hints or action menus.
  */
