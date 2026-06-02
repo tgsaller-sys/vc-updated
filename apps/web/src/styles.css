@@ -36,7 +36,8 @@ button {
 .top-bar,
 .players-strip,
 .hand-actions,
-.lobby-controls {
+.lobby-controls,
+.lobby-seats {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -283,6 +284,52 @@ button {
   justify-content: start;
 }
 
+.lobby-seats {
+  justify-content: start;
+  flex-wrap: wrap;
+}
+
+.lobby-seat {
+  display: grid;
+  gap: 0.4rem;
+  min-inline-size: 12rem;
+  border: 1px solid rgb(23 32 47 / 0.16);
+  border-radius: 8px;
+  padding: 0.65rem;
+  background: rgb(255 255 255 / 0.72);
+  box-shadow: 0 10px 26px rgb(37 45 58 / 0.08);
+}
+
+.lobby-seat span {
+  display: grid;
+  gap: 0.15rem;
+  color: #6a7280;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.lobby-seat strong {
+  color: #17202f;
+  font-size: 0.9rem;
+  text-transform: none;
+}
+
+.lobby-seat select {
+  min-block-size: 2.25rem;
+  border: 1px solid rgb(23 32 47 / 0.2);
+  border-radius: 6px;
+  padding-inline: 0.45rem;
+  background: #ffffff;
+  color: #17202f;
+  font: inherit;
+  font-weight: 800;
+}
+
+.lobby-seat select:disabled {
+  color: #6a7280;
+}
+
 .hand-actions button,
 .lobby-controls button,
 .lobby-controls input,
@@ -441,6 +488,31 @@ button {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.45rem;
+  }
+
+  .lobby-seats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+  }
+
+  .lobby-seat {
+    min-inline-size: 0;
+    padding: 0.5rem;
+  }
+
+  .lobby-seat span {
+    font-size: 0.68rem;
+  }
+
+  .lobby-seat strong {
+    font-size: 0.78rem;
+  }
+
+  .lobby-seat select {
+    inline-size: 100%;
+    min-block-size: 2.15rem;
+    font-size: 0.78rem;
   }
 
   .lobby-controls button,

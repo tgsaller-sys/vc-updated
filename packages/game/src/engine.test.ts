@@ -8,6 +8,7 @@ import {
   dealForVcWithMaxCards,
   identifyCardMove,
   isBombPlay,
+  maxPlayers,
   reduceGameAction,
   shuffleDeck,
   sortCardsForPlay,
@@ -108,6 +109,52 @@ describe("start options", () => {
     });
 
     expect(result.validation.ok).toBe(false);
+  });
+});
+
+describe("lobby seats", () => {
+  it("allows up to four human and bot seats and rejects a fifth player", () => {
+    const lobbyPlayers: readonly Player[] = [
+      ...players,
+      { id: "bot-a", name: "Easy Bot 1", connected: true, joinedAt: "2026-01-01T00:03:00.000Z", kind: "bot", botStrategy: "easy" }
+    ];
+    const fullLobby = lobbyPlayers.reduce(
+      (state, player) => assertValidTransition(reduceGameAction(state, { type: "join", player })),
+      createInitialGameState("four-seat-lobby")
+    );
+    const result = reduceGameAction(fullLobby, {
+      type: "join",
+      player: { id: "player-e", name: "Eve", connected: true, joinedAt: "2026-01-01T00:04:00.000Z" }
+    });
+
+    expect(fullLobby.players).toHaveLength(maxPlayers);
+    expect(result.validation).toEqual({ ok: false, reason: "A lobby supports up to 4 players." });
+  });
+
+  it("removes configurable bot seats during the lobby", () => {
+    const withBot = assertValidTransition(
+      reduceGameAction(lobbyWithPlayers(2), {
+        type: "join",
+        player: {
+          id: "bot-a",
+          name: "Medium Bot 1",
+          connected: true,
+          joinedAt: "2026-01-01T00:03:00.000Z",
+          kind: "bot",
+          botStrategy: "medium"
+        }
+      })
+    );
+    const result = reduceGameAction(withBot, { type: "remove-player", playerId: "bot-a" });
+
+    expect(result.validation.ok).toBe(true);
+    expect(result.state.players.map((player) => player.id)).toEqual(["player-a", "player-b"]);
+  });
+
+  it("does not remove seats after the game starts", () => {
+    const result = reduceGameAction(startedGame(2), { type: "remove-player", playerId: "player-b" });
+
+    expect(result.validation).toEqual({ ok: false, reason: "Players can only be removed during the lobby." });
   });
 });
 

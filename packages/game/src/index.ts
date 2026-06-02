@@ -20,7 +20,7 @@ export {
 } from "./bots";
 export type { BotTurnView, EasyBotOptions } from "./bots";
 export { createShuffledDeck, dealEqually, dealForVc, dealForVcWithMaxCards, shuffleDeck } from "./deck";
-export { reduceGameAction, assertValidTransition } from "./reducer";
+export { reduceGameAction, assertValidTransition, maxPlayers } from "./reducer";
 export {
   allowAnyOwnedCards,
   getLegalMoves,

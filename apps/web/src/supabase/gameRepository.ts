@@ -6,6 +6,7 @@ function actorIdForAction(action: GameAction): string {
     case "join":
       return action.player.id;
     case "set-connection":
+    case "remove-player":
       return action.playerId;
     case "start":
     case "play-cards":

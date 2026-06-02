@@ -36,3 +36,7 @@ export function setPlayerConnection(
 ): readonly Player[] {
   return players.map((player) => (player.id === playerId ? { ...player, connected } : player));
 }
+
+export function removePlayer(players: readonly Player[], playerId: PlayerId): readonly Player[] {
+  return players.filter((player) => player.id !== playerId);
+}

@@ -121,6 +121,10 @@ export type GameAction =
       readonly connected: boolean;
     }
   | {
+      readonly type: "remove-player";
+      readonly playerId: PlayerId;
+    }
+  | {
       readonly type: "start";
       readonly actorId: PlayerId;
       readonly seed: number;

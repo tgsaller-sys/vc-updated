@@ -5,6 +5,7 @@ import { CardView } from "@vc/ui";
 import {
   botTurnDelayMs,
   isBombPlay,
+  maxPlayers,
   nextBotAction,
   reduceGameAction,
   sortCardsForPlay,
@@ -27,6 +28,11 @@ import { useUiStore } from "./store/uiStore";
 import { buildHead } from "./buildInfo";
 
 const maxSeed = 4294967295;
+type LobbySeatType = "human" | BotStrategy;
+
+function botSeatName(strategy: BotStrategy, botNumber: number): string {
+  return `${strategy === "easy" ? "Easy" : "Medium"} Bot ${botNumber}`;
+}
 
 function applyAction(state: GameState, action: GameAction): GameState {
   const result = reduceGameAction(state, action);
@@ -146,7 +152,13 @@ export function App() {
     [game.players, localPlayerId]
   );
   const isActiveTurn = game.currentTurn === activePlayerId;
+  const isBotTurn = game.players.find((player) => player.id === game.currentTurn)?.kind === "bot";
+  const canUseHumanControls = isActiveTurn && !isBotTurn;
   const isRemoteLobby = syncMode === "remote";
+  const lobbySeats = useMemo(
+    () => Array.from({ length: maxPlayers }, (_value, index) => game.players[index]),
+    [game.players]
+  );
   const currentTurnName =
     game.currentTurn === null
       ? "Waiting"
@@ -329,7 +341,28 @@ export function App() {
     const botNumber = game.players.filter((player) => player.kind === "bot").length + 1;
     void dispatch({
       type: "join",
-      player: createBotPlayer(`bot-${window.crypto.randomUUID()}`, `Bot ${botNumber}`, botStrategy)
+      player: createBotPlayer(`bot-${window.crypto.randomUUID()}`, botSeatName(botStrategy, botNumber), botStrategy)
+    });
+  }
+
+  function updateLobbySeat(player: Player | undefined, seatType: LobbySeatType) {
+    if (player?.kind !== "bot") {
+      if (player === undefined && seatType !== "human") {
+        addBot(seatType);
+      }
+
+      return;
+    }
+
+    if (seatType === "human") {
+      void dispatch({ type: "remove-player", playerId: player.id });
+      return;
+    }
+
+    const botNumber = game.players.filter((nextPlayer) => nextPlayer.kind === "bot").indexOf(player) + 1;
+    void dispatch({
+      type: "join",
+      player: createBotPlayer(player.id, botSeatName(seatType, botNumber), seatType)
     });
   }
 
@@ -477,12 +510,6 @@ export function App() {
             <button type="button" onClick={savePlayerName}>
               Save Name
             </button>
-            <button type="button" onClick={() => addBot("easy")}>
-              Add Easy Bot
-            </button>
-            <button type="button" onClick={() => addBot("medium")}>
-              Add Medium Bot
-            </button>
             <button type="button" onClick={() => void createLobby()}>
               Create Lobby
             </button>
@@ -522,6 +549,34 @@ export function App() {
                 aria-label="Random seed"
               />
             </label>
+          </section>
+        ) : null}
+
+        {game.phase === "lobby" ? (
+          <section className="lobby-seats" aria-label="Lobby seats">
+            {lobbySeats.map((player, index) => {
+              const seatType = player?.kind === "bot" ? (player.botStrategy ?? "easy") : "human";
+              const isJoinedHuman = player !== undefined && player.kind !== "bot";
+
+              return (
+                <label className="lobby-seat" key={player?.id ?? `open-seat-${index}`}>
+                  <span>
+                    Seat {index + 1}
+                    <strong>{player?.name ?? "Open human seat"}</strong>
+                  </span>
+                  <select
+                    value={seatType}
+                    disabled={isJoinedHuman}
+                    onChange={(event) => updateLobbySeat(player, event.currentTarget.value as LobbySeatType)}
+                    aria-label={`Seat ${index + 1} player type`}
+                  >
+                    <option value="human">Human</option>
+                    <option value="easy">Easy Bot</option>
+                    <option value="medium">Medium Bot</option>
+                  </select>
+                </label>
+              );
+            })}
           </section>
         ) : null}
 
@@ -629,11 +684,11 @@ export function App() {
               </button>
             ) : (
               <>
-                <button type="button" disabled={!isActiveTurn || selectedCards.length === 0} onClick={playSelectedCards}>
+                <button type="button" disabled={!canUseHumanControls || selectedCards.length === 0} onClick={playSelectedCards}>
                   <Send size={18} aria-hidden="true" />
                   Play {selectedCards.length}
                 </button>
-                <button type="button" disabled={!isActiveTurn || game.currentLeadingPlay === null} onClick={skipTurn}>
+                <button type="button" disabled={!canUseHumanControls || game.currentLeadingPlay === null} onClick={skipTurn}>
                   <SkipForward size={18} aria-hidden="true" />
                   {skipLabel}
                 </button>
@@ -652,7 +707,7 @@ export function App() {
                 key={card.id}
                 card={card}
                 selected={selectedCardIds.includes(card.id)}
-                disabled={game.phase !== "playing" || !isActiveTurn}
+                disabled={game.phase !== "playing" || !canUseHumanControls}
                 onClick={(nextCard) => toggleCard(nextCard.id)}
               />
             ))}

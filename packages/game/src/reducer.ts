@@ -1,11 +1,12 @@
 import { createShuffledDeck, dealForVc, dealForVcWithMaxCards } from "./deck";
 import { sortCardsForPlay } from "./cards";
 import { allOtherPlayersSkipped, nextEligiblePlayerId } from "./turns";
-import { setPlayerConnection, upsertPlayer } from "./state";
+import { removePlayer, setPlayerConnection, upsertPlayer } from "./state";
 import { validatePlay, validateSkip } from "./rules";
 import type { Card, GameAction, GameState, RuleValidator, ValidationResult } from "./types";
 
 const maxSeed = 4294967295;
+export const maxPlayers = 4;
 
 export interface TransitionResult {
   readonly state: GameState;
@@ -85,6 +86,10 @@ export function reduceGameAction(
         return { state, validation: { ok: false, reason: "Players can only join during the lobby." } };
       }
 
+      if (!state.players.some((player) => player.id === action.player.id) && state.players.length >= maxPlayers) {
+        return { state, validation: { ok: false, reason: `A lobby supports up to ${maxPlayers} players.` } };
+      }
+
       return {
         state: bumpVersion({
           ...state,
@@ -99,6 +104,20 @@ export function reduceGameAction(
         state: bumpVersion({
           ...state,
           players: setPlayerConnection(state.players, action.playerId, action.connected)
+        }),
+        validation: { ok: true }
+      };
+    }
+
+    case "remove-player": {
+      if (state.phase !== "lobby") {
+        return { state, validation: { ok: false, reason: "Players can only be removed during the lobby." } };
+      }
+
+      return {
+        state: bumpVersion({
+          ...state,
+          players: removePlayer(state.players, action.playerId)
         }),
         validation: { ok: true }
       };
