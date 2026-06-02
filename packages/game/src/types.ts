@@ -27,12 +27,15 @@ export type PlayerId = string;
 
 export type PlayerKind = "human" | "bot";
 
+export type BotStrategy = "easy" | "medium";
+
 export interface Player {
   readonly id: PlayerId;
   readonly name: string;
   readonly connected: boolean;
   readonly joinedAt: string;
   readonly kind?: PlayerKind;
+  readonly botStrategy?: BotStrategy;
 }
 
 export type CardMoveType = "single" | "pair" | "triple" | "straight" | "bomb";

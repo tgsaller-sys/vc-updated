@@ -1,4 +1,4 @@
-import { sortCardsForPlay } from "./cards";
+import { compareCardsForPlay, rankValue, sortCardsForPlay } from "./cards";
 import { reduceGameAction } from "./reducer";
 import { getLegalMoves } from "./rules";
 import type { Card, CardMove, GameAction, GameState, Player, PlayerId } from "./types";
@@ -8,6 +8,7 @@ export interface BotTurnView {
   readonly hand: readonly Card[];
   readonly currentTablePlay: CardMove | null;
   readonly isLeading: boolean;
+  readonly opponentCardCounts: readonly number[];
   readonly requiredOpeningCard?: Card;
 }
 
@@ -41,6 +42,9 @@ export function createBotTurnView(state: GameState, actorId: PlayerId): BotTurnV
     hand,
     currentTablePlay: state.currentLeadingPlay,
     isLeading,
+    opponentCardCounts: state.turnOrder
+      .filter((playerId) => playerId !== actorId && !(state.finishedPlayerIds ?? []).includes(playerId))
+      .map((playerId) => state.hands[playerId]?.length ?? 0),
     ...(requiredOpeningCard === undefined ? {} : { requiredOpeningCard })
   };
 }
@@ -80,6 +84,113 @@ export function chooseEasyBotAction(view: BotTurnView, options: EasyBotOptions =
   return { type: "skip", actorId: view.actorId };
 }
 
+function actionForPlay(actorId: PlayerId, play: CardMove): GameAction {
+  return {
+    type: "play-cards",
+    actorId,
+    cardIds: play.cards.map((card) => card.id)
+  };
+}
+
+function compareMovesForCost(left: CardMove, right: CardMove): number {
+  const highCardDifference = compareCardsForPlay(left.highCard, right.highCard);
+
+  if (highCardDifference !== 0) {
+    return highCardDifference;
+  }
+
+  return right.length - left.length;
+}
+
+function isVeryStrongMove(move: CardMove): boolean {
+  return move.type === "bomb" || move.cards.some((card) => card.rank === "2");
+}
+
+function protectedComboCardIds(hand: readonly Card[]): ReadonlySet<Card["id"]> {
+  const byRank = new Map<Card["rank"], readonly Card[]>();
+  const protectedIds = new Set<Card["id"]>();
+
+  for (const card of hand) {
+    byRank.set(card.rank, [...(byRank.get(card.rank) ?? []), card]);
+  }
+
+  for (const cards of byRank.values()) {
+    if (cards.length === 4) {
+      cards.forEach((card) => protectedIds.add(card.id));
+    }
+  }
+
+  const ranksWithPairs = [...byRank.entries()]
+    .filter(([rank, cards]) => rank !== "2" && cards.length >= 2)
+    .sort(([leftRank], [rightRank]) => rankValue(leftRank) - rankValue(rightRank));
+
+  for (let start = 0; start < ranksWithPairs.length; start += 1) {
+    for (let end = start + 3; end <= ranksWithPairs.length; end += 1) {
+      const run = ranksWithPairs.slice(start, end);
+      const isConsecutive = run.every(([rank], index) => {
+        const previous = run[index - 1];
+        return index === 0 || (previous !== undefined && rankValue(rank) === rankValue(previous[0]) + 1);
+      });
+
+      if (!isConsecutive) {
+        break;
+      }
+
+      run.forEach(([, cards]) => cards.forEach((card) => protectedIds.add(card.id)));
+    }
+  }
+
+  return protectedIds;
+}
+
+function spendsProtectedCards(move: CardMove, protectedIds: ReadonlySet<Card["id"]>): boolean {
+  return isVeryStrongMove(move) || move.cards.some((card) => protectedIds.has(card.id));
+}
+
+/**
+ * Chooses a conservative MediumBot action using legal moves and public hand sizes.
+ */
+export function chooseMediumBotAction(view: BotTurnView): GameAction {
+  const moves = getLegalMoves({
+    hand: view.hand,
+    currentTablePlay: view.currentTablePlay,
+    isLeading: view.isLeading,
+    options: view.requiredOpeningCard === undefined ? {} : { requiredOpeningCard: view.requiredOpeningCard }
+  });
+  const plays = moves.filter((move): move is CardMove => move.type !== "pass");
+  const protectedIds = protectedComboCardIds(view.hand);
+  const winningPlays = plays.filter((move) => move.cards.length === view.hand.length).sort(compareMovesForCost);
+
+  if (winningPlays[0] !== undefined) {
+    return actionForPlay(view.actorId, winningPlays[0]);
+  }
+
+  if (!view.isLeading) {
+    const ordinaryPlays = plays.filter((move) => !spendsProtectedCards(move, protectedIds));
+    const availablePlays = ordinaryPlays.length > 0 ? ordinaryPlays : plays;
+    const cheapestPlay = [...availablePlays].sort(compareMovesForCost)[0];
+    const opponentCloseToGoingOut = view.opponentCardCounts.some((count) => count <= 2);
+
+    if (cheapestPlay === undefined || (spendsProtectedCards(cheapestPlay, protectedIds) && !opponentCloseToGoingOut)) {
+      return { type: "skip", actorId: view.actorId };
+    }
+
+    return actionForPlay(view.actorId, cheapestPlay);
+  }
+
+  const preservedPlays = plays.filter((move) => !spendsProtectedCards(move, protectedIds));
+  const availablePlays = preservedPlays.length > 0 ? preservedPlays : plays;
+  const combinations = availablePlays.filter((move) => move.length > 1);
+  const preferredPlays = combinations.length > 0 ? combinations : availablePlays;
+  const cheapestPlay = [...preferredPlays].sort(compareMovesForCost)[0];
+
+  if (cheapestPlay === undefined) {
+    return { type: "skip", actorId: view.actorId };
+  }
+
+  return actionForPlay(view.actorId, cheapestPlay);
+}
+
 export function chooseBotAction(view: BotTurnView, options: EasyBotOptions = {}): GameAction {
   return chooseEasyBotAction(view, options);
 }
@@ -99,7 +210,8 @@ export function nextBotAction(state: GameState, options: EasyBotOptions = {}): G
     return { type: "skip", actorId: state.currentTurn };
   }
 
-  return chooseBotAction(createBotTurnView(state, state.currentTurn), options);
+  const view = createBotTurnView(state, state.currentTurn);
+  return player?.botStrategy === "medium" ? chooseMediumBotAction(view) : chooseBotAction(view, options);
 }
 
 /**

@@ -10,7 +10,8 @@ import {
   sortCardsForPlay,
   type GameAction,
   type GameState,
-  type Player
+  type Player,
+  type BotStrategy
 } from "@vc/game";
 import { createBotPlayer, createDemoGame, createLobbyGame, createPlayer } from "./lib/localGame";
 import { createLobbyCode } from "./lib/lobbyCode";
@@ -324,11 +325,11 @@ export function App() {
     void dispatch({ type: "join", player: createPlayer(localPlayerId, preferredPlayerName) });
   }
 
-  function addBot() {
+  function addBot(botStrategy: BotStrategy) {
     const botNumber = game.players.filter((player) => player.kind === "bot").length + 1;
     void dispatch({
       type: "join",
-      player: createBotPlayer(`bot-${window.crypto.randomUUID()}`, `Bot ${botNumber}`)
+      player: createBotPlayer(`bot-${window.crypto.randomUUID()}`, `Bot ${botNumber}`, botStrategy)
     });
   }
 
@@ -476,8 +477,11 @@ export function App() {
             <button type="button" onClick={savePlayerName}>
               Save Name
             </button>
-            <button type="button" onClick={addBot}>
-              Add Bot
+            <button type="button" onClick={() => addBot("easy")}>
+              Add Easy Bot
+            </button>
+            <button type="button" onClick={() => addBot("medium")}>
+              Add Medium Bot
             </button>
             <button type="button" onClick={() => void createLobby()}>
               Create Lobby

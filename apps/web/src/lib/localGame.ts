@@ -3,6 +3,7 @@ import {
   createInitialGameState,
   reduceGameAction,
   type GameAction,
+  type BotStrategy,
   type GameState,
   type Player
 } from "@vc/game";
@@ -19,10 +20,11 @@ export function createPlayer(playerId: string, name: string): Player {
   };
 }
 
-export function createBotPlayer(playerId: string, name: string): Player {
+export function createBotPlayer(playerId: string, name: string, botStrategy: BotStrategy = "easy"): Player {
   return {
     ...createPlayer(playerId, name),
-    kind: "bot"
+    kind: "bot",
+    botStrategy
   };
 }
 

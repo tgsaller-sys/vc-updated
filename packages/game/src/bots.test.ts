@@ -3,6 +3,7 @@ import {
   assertValidTransition,
   botTurnDelayMs,
   chooseEasyBotAction,
+  chooseMediumBotAction,
   createBotTurnView,
   createDeck,
   createInitialGameState,
@@ -129,6 +130,7 @@ describe("computer players", () => {
     const view = createBotTurnView({ ...state, currentTurn: "bot-a" }, "bot-a");
 
     expect(view.hand).toEqual(state.hands["bot-a"]);
+    expect(view.opponentCardCounts).toEqual([2, 2, 2]);
     expect(view).not.toHaveProperty("hands");
     expect(view).not.toHaveProperty("deck");
     expect(view).not.toHaveProperty("players");
@@ -205,7 +207,8 @@ describe("computer players", () => {
           highCard: card("spades-3"),
           length: 1
         },
-        isLeading: false
+        isLeading: false,
+        opponentCardCounts: [3]
       },
       { random: () => 0.99, passProbability: 0 }
     );
@@ -225,7 +228,8 @@ describe("computer players", () => {
           highCard: card("spades-3"),
           length: 1
         },
-        isLeading: false
+        isLeading: false,
+        opponentCardCounts: [3]
       },
       { random: () => 0, passProbability: 0.25 }
     );
@@ -245,7 +249,8 @@ describe("computer players", () => {
           highCard: card("spades-3"),
           length: 1
         },
-        isLeading: false
+        isLeading: false,
+        opponentCardCounts: [3]
       },
       { random: () => 0, passProbability: 1 }
     );
@@ -259,11 +264,156 @@ describe("computer players", () => {
         actorId: "bot-a",
         hand: [card("clubs-4"), card("diamonds-5")],
         currentTablePlay: null,
-        isLeading: true
+        isLeading: true,
+        opponentCardCounts: [3]
       },
       { random: () => 0, passProbability: 1 }
     );
 
     expect(action).toEqual({ type: "play-cards", actorId: "bot-a", cardIds: ["clubs-4"] });
+  });
+
+  it("has MediumBot answer with the cheapest legal move that beats the table", () => {
+    const action = chooseMediumBotAction({
+      actorId: "bot-a",
+      hand: [card("clubs-4"), card("diamonds-5"), card("hearts-6")],
+      currentTablePlay: {
+        type: "single",
+        cards: [card("spades-3")],
+        primaryRank: "3",
+        highCard: card("spades-3"),
+        length: 1
+      },
+      isLeading: false,
+      opponentCardCounts: [3]
+    });
+
+    expect(action).toEqual({ type: "play-cards", actorId: "bot-a", cardIds: ["clubs-4"] });
+  });
+
+  it("has MediumBot pass rather than spend a 2 when no opponent is close to going out", () => {
+    const action = chooseMediumBotAction({
+      actorId: "bot-a",
+      hand: [card("clubs-4"), card("spades-2")],
+      currentTablePlay: {
+        type: "single",
+        cards: [card("hearts-A")],
+        primaryRank: "A",
+        highCard: card("hearts-A"),
+        length: 1
+      },
+      isLeading: false,
+      opponentCardCounts: [4, 5]
+    });
+
+    expect(action).toEqual({ type: "skip", actorId: "bot-a" });
+  });
+
+  it("has MediumBot spend a 2 when an opponent is close to going out", () => {
+    const action = chooseMediumBotAction({
+      actorId: "bot-a",
+      hand: [card("clubs-4"), card("spades-2")],
+      currentTablePlay: {
+        type: "single",
+        cards: [card("hearts-A")],
+        primaryRank: "A",
+        highCard: card("hearts-A"),
+        length: 1
+      },
+      isLeading: false,
+      opponentCardCounts: [2, 5]
+    });
+
+    expect(action).toEqual({ type: "play-cards", actorId: "bot-a", cardIds: ["spades-2"] });
+  });
+
+  it("has MediumBot preserve a double-straight chop when no opponent is close to going out", () => {
+    const action = chooseMediumBotAction({
+      actorId: "bot-a",
+      hand: [
+        card("spades-4"),
+        card("clubs-4"),
+        card("spades-5"),
+        card("clubs-5"),
+        card("spades-6"),
+        card("clubs-6"),
+        card("diamonds-9")
+      ],
+      currentTablePlay: {
+        type: "single",
+        cards: [card("spades-2")],
+        primaryRank: "2",
+        highCard: card("spades-2"),
+        length: 1
+      },
+      isLeading: false,
+      opponentCardCounts: [4]
+    });
+
+    expect(action).toEqual({ type: "skip", actorId: "bot-a" });
+  });
+
+  it("has MediumBot lead a low combination to reduce its hand size", () => {
+    const action = chooseMediumBotAction({
+      actorId: "bot-a",
+      hand: [card("spades-4"), card("clubs-4"), card("diamonds-5")],
+      currentTablePlay: null,
+      isLeading: true,
+      opponentCardCounts: [3]
+    });
+
+    expect(action).toEqual({ type: "play-cards", actorId: "bot-a", cardIds: ["spades-4", "clubs-4"] });
+  });
+
+  it("has MediumBot preserve 2s and bombs while leading when a low ordinary play is available", () => {
+    const action = chooseMediumBotAction({
+      actorId: "bot-a",
+      hand: [card("clubs-4"), card("spades-8"), card("clubs-8"), card("diamonds-8"), card("hearts-8"), card("spades-2")],
+      currentTablePlay: null,
+      isLeading: true,
+      opponentCardCounts: [4]
+    });
+
+    expect(action).toEqual({ type: "play-cards", actorId: "bot-a", cardIds: ["clubs-4"] });
+  });
+
+  it("has MediumBot take a winning move before conserving strong cards", () => {
+    const action = chooseMediumBotAction({
+      actorId: "bot-a",
+      hand: [card("spades-2")],
+      currentTablePlay: {
+        type: "single",
+        cards: [card("hearts-A")],
+        primaryRank: "A",
+        highCard: card("hearts-A"),
+        length: 1
+      },
+      isLeading: false,
+      opponentCardCounts: [5]
+    });
+
+    expect(action).toEqual({ type: "play-cards", actorId: "bot-a", cardIds: ["spades-2"] });
+  });
+
+  it("routes medium bot seats through the MediumBot strategy", () => {
+    const state: GameState = {
+      ...fourSeatGame(),
+      players: players.map((player) => (player.id === "bot-a" ? { ...player, botStrategy: "medium" } : player)),
+      currentTurn: "bot-a",
+      currentLeadingPlay: {
+        playerId: "human-a",
+        type: "single",
+        cards: [card("spades-3")],
+        primaryRank: "3",
+        highCard: card("spades-3"),
+        length: 1
+      }
+    };
+
+    expect(nextBotAction(state, { random: () => 0.99 })).toEqual({
+      type: "play-cards",
+      actorId: "bot-a",
+      cardIds: ["clubs-4"]
+    });
   });
 });
