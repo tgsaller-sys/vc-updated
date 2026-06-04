@@ -108,6 +108,32 @@ describe("getLegalMoves", () => {
     expect(playIds(moves).flat()).not.toContain("diamonds-2");
   });
 
+  it("marks single-suit straights as locked", () => {
+    expect(move([card("hearts-3"), card("hearts-4"), card("hearts-5")]).metadata?.straightSuitLock).toBe(true);
+    expect(move([card("spades-3"), card("clubs-4"), card("diamonds-5")]).metadata?.straightSuitLock).toBeUndefined();
+  });
+
+  it("requires a single-suit straight to beat a locked straight", () => {
+    const moves = getLegalMoves({
+      hand: [card("spades-4"), card("clubs-4"), card("clubs-5"), card("diamonds-6"), card("clubs-6")],
+      currentTablePlay: move([card("hearts-3"), card("hearts-4"), card("hearts-5")]),
+      isLeading: false
+    });
+
+    expect(playIds(moves)).toEqual([["clubs-4", "clubs-5", "clubs-6"]]);
+  });
+
+  it("allows mixed-suit straights to beat an unlocked straight", () => {
+    const moves = getLegalMoves({
+      hand: [card("spades-4"), card("clubs-4"), card("clubs-5"), card("diamonds-6"), card("clubs-6")],
+      currentTablePlay: move([card("spades-3"), card("clubs-4"), card("diamonds-5")]),
+      isLeading: false
+    });
+
+    expect(playIds(moves)).toContainEqual(["clubs-4", "clubs-5", "clubs-6"]);
+    expect(playIds(moves)).toContainEqual(["spades-4", "clubs-5", "diamonds-6"]);
+  });
+
   it("returns quad and double-straight bombs or chops against a single 2", () => {
     const moves = getLegalMoves({
       hand: [

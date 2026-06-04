@@ -44,6 +44,7 @@ export type BombKind = "quad" | "double-straight";
 
 export interface MoveMetadata {
   readonly bombKind?: BombKind;
+  readonly straightSuitLock?: boolean;
 }
 
 export interface CardMove {

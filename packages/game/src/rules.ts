@@ -27,6 +27,11 @@ function sameRank(cards: readonly Card[]): boolean {
   return firstRank !== undefined && cards.every((card) => card.rank === firstRank);
 }
 
+function sameSuit(cards: readonly Card[]): boolean {
+  const firstSuit = cards[0]?.suit;
+  return firstSuit !== undefined && cards.every((card) => card.suit === firstSuit);
+}
+
 function getMultipleType(length: number): CardMoveType | null {
   switch (length) {
     case 1:
@@ -140,7 +145,8 @@ export function identifyCardMove(cards: readonly Card[]): CardMove | null {
       cards: sortCardsForPlay(cards),
       length: cards.length,
       primaryRank: highStraightRank,
-      highCard
+      highCard,
+      ...(sameSuit(cards) ? { metadata: { straightSuitLock: true as const } } : {})
     };
   }
 
@@ -171,6 +177,10 @@ export function isBombPlay(cards: readonly Card[]): boolean {
 
 function isSingleTwo(move: CardMove): boolean {
   return move.type === "single" && move.highCard.rank === "2";
+}
+
+function isSuitLockedStraight(move: CardMove): boolean {
+  return move.type === "straight" && (move.metadata?.straightSuitLock === true || sameSuit(move.cards));
 }
 
 function validateVcCards(
@@ -224,6 +234,10 @@ function validateVcCards(
     nextMove.metadata?.bombKind !== currentTablePlay.metadata?.bombKind
   ) {
     return { ok: false, reason: "Play the same format as the current leading play or skip." };
+  }
+
+  if (isSuitLockedStraight(currentTablePlay) && !isSuitLockedStraight(nextMove)) {
+    return { ok: false, reason: "A locked straight can only be beaten by another single-suit straight." };
   }
 
   if (compareCardsForPlay(nextMove.highCard, currentTablePlay.highCard) <= 0) {
