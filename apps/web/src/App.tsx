@@ -546,7 +546,7 @@ export function App() {
 
         {game.phase === "lobby" ? (
           <section className="lobby-controls" aria-label="Lobby controls">
-            <div className="lobby-control-row">
+            <div className="lobby-control-row name-control-row">
               <input
                 className="player-name-input"
                 value={playerName}

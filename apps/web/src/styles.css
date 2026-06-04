@@ -549,6 +549,10 @@ button {
     gap: 0.45rem;
   }
 
+  .name-control-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
   .lobby-seats {
     display: grid;
     grid-template-columns: 1fr 1fr;
