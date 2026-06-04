@@ -36,7 +36,6 @@ button {
 .top-bar,
 .players-strip,
 .hand-actions,
-.lobby-controls,
 .lobby-seats {
   display: flex;
   align-items: center;
@@ -281,7 +280,16 @@ button {
 }
 
 .lobby-controls {
-  justify-content: start;
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+
+.lobby-control-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
 }
 
 .lobby-seats {
@@ -530,7 +538,14 @@ button {
   .lobby-controls {
     align-items: stretch;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+    justify-items: stretch;
+  }
+
+  .lobby-control-row {
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 0.45rem;
   }
 

@@ -9,7 +9,7 @@ export { chooseBotAction, chooseEasyBotAction, chooseMediumBotAction } from "./b
 export { chooseHardBotAction } from "./hardBotStrategy";
 export type { BotTurnView, EasyBotOptions } from "./botStrategies";
 
-export const botTurnDelayMs = 2000;
+export const botTurnDelayMs = 3000;
 export const maximumAutomaticBotTurns = 1000;
 
 export function isBotPlayer(player: Player | undefined): player is Player & { readonly kind: "bot" } {

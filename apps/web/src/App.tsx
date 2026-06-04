@@ -546,69 +546,79 @@ export function App() {
 
         {game.phase === "lobby" ? (
           <section className="lobby-controls" aria-label="Lobby controls">
-            <input
-              className="player-name-input"
-              value={playerName}
-              maxLength={24}
-              onChange={(event) => setPlayerName(event.target.value)}
-              placeholder="Your name"
-              aria-label="Your name"
-            />
-            <button type="button" onClick={savePlayerName}>
-              Save Name
-            </button>
-            <button type="button" onClick={() => void createLobby()}>
-              Create Lobby
-            </button>
-            <input
-              className="lobby-code-input"
-              value={lobbyCode}
-              maxLength={8}
-              onChange={(event) => setLobbyCode(event.target.value)}
-              placeholder="CODE"
-              aria-label="Lobby code"
-            />
-            <button type="button" onClick={() => void joinLobby()}>
-              Join
-            </button>
-            <label className="max-cards-control">
-              <span>Max cards</span>
+            <div className="lobby-control-row">
               <input
-                type="number"
-                min={1}
-                max={52}
-                step={1}
-                value={maxCardsPerPlayer}
-                onChange={(event) => setMaxCardsPerPlayer(event.currentTarget.valueAsNumber)}
-                aria-label="Maximum cards per player"
+                className="player-name-input"
+                value={playerName}
+                maxLength={24}
+                onChange={(event) => setPlayerName(event.target.value)}
+                placeholder="Your name"
+                aria-label="Your name"
               />
-            </label>
-            <label className="seed-control">
-              <span>Seed</span>
+              <button type="button" onClick={savePlayerName}>
+                Save Name
+              </button>
+            </div>
+            <div className="lobby-control-row">
+              <button type="button" onClick={() => void createLobby()}>
+                Create Lobby
+              </button>
               <input
-                type="number"
-                min={0}
-                max={maxSeed}
-                step={1}
-                value={gameSeed}
-                onChange={(event) => setGameSeed(event.currentTarget.value)}
-                placeholder="Random"
-                aria-label="Random seed"
+                className="lobby-code-input"
+                value={lobbyCode}
+                maxLength={8}
+                onChange={(event) => setLobbyCode(event.target.value)}
+                placeholder="Lobby code"
+                aria-label="Lobby code"
               />
-            </label>
-            <label className="bot-delay-control">
-              <span>Bot delay</span>
-              <input
-                type="number"
-                min={0}
-                max={30}
-                step={0.5}
-                value={botTurnDelaySeconds}
-                onChange={(event) => setBotTurnDelaySeconds(event.currentTarget.valueAsNumber)}
-                aria-label="Bot delay in seconds"
-              />
-              <span>s</span>
-            </label>
+              <button type="button" onClick={() => void joinLobby()}>
+                Join
+              </button>
+            </div>
+            <div className="lobby-control-row">
+              <label className="max-cards-control">
+                <span>Max cards</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={52}
+                  step={1}
+                  value={maxCardsPerPlayer}
+                  onChange={(event) => setMaxCardsPerPlayer(event.currentTarget.valueAsNumber)}
+                  aria-label="Maximum cards per player"
+                />
+              </label>
+            </div>
+            <div className="lobby-control-row">
+              <label className="seed-control">
+                <span>Seed</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={maxSeed}
+                  step={1}
+                  value={gameSeed}
+                  onChange={(event) => setGameSeed(event.currentTarget.value)}
+                  placeholder="Random"
+                  aria-label="Random seed"
+                />
+              </label>
+            </div>
+            <div className="lobby-control-row">
+              <label className="bot-delay-control">
+                <span>Bot delay</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={30}
+                  step={0.5}
+                  value={botTurnDelaySeconds}
+                  onChange={(event) => setBotTurnDelaySeconds(event.currentTarget.valueAsNumber)}
+                  aria-label="Bot delay in seconds"
+                />
+                <span>s</span>
+              </label>
+            </div>
           </section>
         ) : null}
 
