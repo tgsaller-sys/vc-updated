@@ -32,7 +32,8 @@ const maxSeed = 4294967295;
 type LobbySeatType = "human" | BotStrategy;
 
 function botSeatName(strategy: BotStrategy, botNumber: number): string {
-  return `${strategy === "easy" ? "Easy" : "Medium"} Bot ${botNumber}`;
+  const label = strategy === "easy" ? "Easy" : strategy === "medium" ? "Medium" : "Hard";
+  return `${label} Bot ${botNumber}`;
 }
 
 function applyAction(state: GameState, action: GameAction): GameState {
@@ -580,6 +581,7 @@ export function App() {
                     <option value="human">Human</option>
                     <option value="easy">Easy Bot</option>
                     <option value="medium">Medium Bot</option>
+                    <option value="hard">Hard Bot</option>
                   </select>
                 </label>
               );

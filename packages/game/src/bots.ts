@@ -1,10 +1,12 @@
 import { sortCardsForPlay } from "./cards";
 import { reduceGameAction } from "./reducer";
 import { chooseEasyBotAction, chooseMediumBotAction } from "./botStrategies";
+import { chooseHardBotAction } from "./hardBotStrategy";
 import type { BotTurnView, EasyBotOptions } from "./botStrategies";
 import type { GameAction, GameState, Player, PlayerId } from "./types";
 
 export { chooseBotAction, chooseEasyBotAction, chooseMediumBotAction } from "./botStrategies";
+export { chooseHardBotAction } from "./hardBotStrategy";
 export type { BotTurnView, EasyBotOptions } from "./botStrategies";
 
 export const botTurnDelayMs = 2000;
@@ -28,10 +30,13 @@ export function createBotTurnView(state: GameState, actorId: PlayerId): BotTurnV
     actorId,
     hand,
     currentTablePlay: state.currentLeadingPlay,
+    ...(state.currentLeadingPlay?.playerId === undefined ? {} : { currentTablePlayerId: state.currentLeadingPlay.playerId }),
     isLeading,
     opponentCardCounts: state.turnOrder
       .filter((playerId) => playerId !== actorId && !(state.finishedPlayerIds ?? []).includes(playerId))
       .map((playerId) => state.hands[playerId]?.length ?? 0),
+    playedCards: state.discardPile.flatMap((play) => play.cards),
+    turnOrder: state.turnOrder,
     ...(requiredOpeningCard === undefined ? {} : { requiredOpeningCard })
   };
 }
@@ -52,7 +57,17 @@ export function nextBotAction(state: GameState, options: EasyBotOptions = {}): G
   }
 
   const view = createBotTurnView(state, state.currentTurn);
-  return player.botStrategy === "medium" ? chooseMediumBotAction(view) : chooseEasyBotAction(view, options);
+  switch (player.botStrategy) {
+    case "hard":
+      return chooseHardBotAction(view);
+    case "medium":
+      return chooseMediumBotAction(view);
+    case "easy":
+    case undefined:
+      return chooseEasyBotAction(view, options);
+    default:
+      return chooseEasyBotAction(view, options);
+  }
 }
 
 /**

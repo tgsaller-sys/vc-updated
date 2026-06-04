@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { assertValidTransition, createInitialGameState, nextBotAction, reduceGameAction } from ".";
 import type { BotStrategy, GameAction, GameState, Player, PlayerId } from ".";
 
-const simulationCount = 100;
+const simulationCount = 1000;
 const maximumActionsPerGame = 1000;
 
 function createSeededRandom(seed: number): () => number {
@@ -14,14 +14,14 @@ function createSeededRandom(seed: number): () => number {
   };
 }
 
-function createBotPlayers(): readonly Player[] {
+function createBotPlayers(strategies: readonly BotStrategy[] = ["easy", "medium", "easy", "medium"]): readonly Player[] {
   return Array.from({ length: 4 }, (_value, index) => {
     const botNumber = index + 1;
-    const botStrategy: BotStrategy = index % 2 === 0 ? "easy" : "medium";
+    const botStrategy = strategies[index] ?? "medium";
 
     return {
       id: `bot-${botNumber}`,
-      name: `${botStrategy === "easy" ? "Easy" : "Medium"} Bot ${botNumber}`,
+      name: `${botStrategy === "easy" ? "Easy" : botStrategy === "medium" ? "Medium" : "Hard"} Bot ${botNumber}`,
       connected: true,
       joinedAt: `2026-01-01T00:0${index}:00.000Z`,
       kind: "bot",
@@ -71,8 +71,7 @@ function finishOrder(state: GameState): readonly PlayerId[] {
   return [...finishedPlayers, ...state.turnOrder.filter((playerId) => !finishedPlayers.includes(playerId))];
 }
 
-function simulateGame(seed: number): GameState {
-  const players = createBotPlayers();
+function simulateGame(seed: number, players = createBotPlayers()): GameState {
   const random = createSeededRandom(seed ^ 0x9e3779b9);
   const lobby = players.reduce(
     (state, player) => assertValidTransition(reduceGameAction(state, { type: "join", player })),
@@ -127,4 +126,31 @@ describe("four-bot game simulations", () => {
       expect((finalState.finishedPlayerIds ?? []).every((playerId) => finalState.hands[playerId]?.length === 0), `seed ${seed}`).toBe(true);
     }
   });
+
+  it(`compares HardBot against MediumBot over ${simulationCount} full games`, () => {
+    const wins = new Map<PlayerId, number>();
+    const players = createBotPlayers(["hard", "medium", "medium", "medium"]);
+
+    for (let seed = 0; seed < simulationCount; seed += 1) {
+      const finalState = simulateGame(seed + 10000, players);
+      const winnerId = finalState.winnerId;
+
+      if (winnerId === null) {
+        throw new Error(`Simulation seed ${seed + 10000} finished without a winner.`);
+      }
+
+      wins.set(winnerId, (wins.get(winnerId) ?? 0) + 1);
+      expect(finishOrder(finalState), `seed ${seed + 10000}`).toHaveLength(4);
+    }
+
+    const hardWins = wins.get("bot-1") ?? 0;
+    const mediumWins = simulationCount - hardWins;
+    console.info(
+      `HardBot comparison: hard=${hardWins}/${simulationCount} (${(hardWins / simulationCount).toFixed(
+        3
+      )}), medium=${mediumWins}/${simulationCount}`
+    );
+
+    expect(hardWins).toBeGreaterThan(0);
+  }, 120000);
 });

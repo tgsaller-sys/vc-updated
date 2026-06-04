@@ -3,6 +3,7 @@ import {
   assertValidTransition,
   botTurnDelayMs,
   chooseEasyBotAction,
+  chooseHardBotAction,
   chooseMediumBotAction,
   createBotTurnView,
   createDeck,
@@ -131,6 +132,8 @@ describe("computer players", () => {
 
     expect(view.hand).toEqual(state.hands["bot-a"]);
     expect(view.opponentCardCounts).toEqual([2, 2, 2]);
+    expect(view.playedCards).toEqual([]);
+    expect(view.turnOrder).toEqual(["human-a", "bot-a", "bot-b", "human-b"]);
     expect(view).not.toHaveProperty("hands");
     expect(view).not.toHaveProperty("deck");
     expect(view).not.toHaveProperty("players");
@@ -481,5 +484,128 @@ describe("computer players", () => {
       actorId: "bot-a",
       cardIds: ["clubs-4"]
     });
+  });
+
+  it("has HardBot preserve bombs early when ordinary plays are available", () => {
+    const action = chooseHardBotAction({
+      actorId: "bot-a",
+      hand: [card("clubs-4"), card("spades-8"), card("clubs-8"), card("diamonds-8"), card("hearts-8")],
+      currentTablePlay: null,
+      isLeading: true,
+      opponentCardCounts: [8, 8, 8],
+      playedCards: [],
+      turnOrder: ["bot-a", "bot-b", "bot-c", "bot-d"]
+    });
+
+    expect(action).toEqual({ type: "play-cards", actorId: "bot-a", cardIds: ["clubs-4"] });
+  });
+
+  it("has HardBot use a bomb to stop a player with one card", () => {
+    const action = chooseHardBotAction({
+      actorId: "bot-a",
+      hand: [
+        card("spades-4"),
+        card("clubs-4"),
+        card("spades-5"),
+        card("clubs-5"),
+        card("spades-6"),
+        card("clubs-6"),
+        card("diamonds-9")
+      ],
+      currentTablePlay: {
+        type: "single",
+        cards: [card("spades-2")],
+        primaryRank: "2",
+        highCard: card("spades-2"),
+        length: 1
+      },
+      isLeading: false,
+      opponentCardCounts: [1, 7],
+      playedCards: [card("hearts-3"), card("diamonds-3")],
+      turnOrder: ["bot-a", "bot-b", "bot-c"]
+    });
+
+    expect(action).toEqual({
+      type: "play-cards",
+      actorId: "bot-a",
+      cardIds: ["spades-4", "clubs-4", "spades-5", "clubs-5", "spades-6", "clubs-6"]
+    });
+  });
+
+  it("has HardBot lead with a straight instead of a single when it improves the hand", () => {
+    const action = chooseHardBotAction({
+      actorId: "bot-a",
+      hand: [card("spades-4"), card("clubs-5"), card("diamonds-6"), card("hearts-9")],
+      currentTablePlay: null,
+      isLeading: true,
+      opponentCardCounts: [6, 6],
+      playedCards: [],
+      turnOrder: ["bot-a", "bot-b", "bot-c"]
+    });
+
+    expect(action).toEqual({ type: "play-cards", actorId: "bot-a", cardIds: ["spades-4", "clubs-5", "diamonds-6"] });
+  });
+
+  it("has HardBot choose a move that leaves a shorter endgame line", () => {
+    const action = chooseHardBotAction({
+      actorId: "bot-a",
+      hand: [card("spades-4"), card("clubs-4"), card("hearts-4"), card("diamonds-5"), card("hearts-5")],
+      currentTablePlay: {
+        type: "pair",
+        cards: [card("spades-3"), card("clubs-3")],
+        primaryRank: "3",
+        highCard: card("clubs-3"),
+        length: 2
+      },
+      isLeading: false,
+      opponentCardCounts: [5, 5],
+      playedCards: [],
+      turnOrder: ["bot-a", "bot-b", "bot-c"]
+    });
+
+    expect(action).toEqual({ type: "play-cards", actorId: "bot-a", cardIds: ["diamonds-5", "hearts-5"] });
+  });
+
+  it("does not let HardBot read hidden opponent cards", () => {
+    const baseState: GameState = {
+      ...fourSeatGame(),
+      players: players.map((player) => (player.id === "bot-a" ? { ...player, botStrategy: "hard" } : player)),
+      currentTurn: "bot-a",
+      currentLeadingPlay: {
+        playerId: "human-a",
+        type: "single",
+        cards: [card("spades-3")],
+        primaryRank: "3",
+        highCard: card("spades-3"),
+        length: 1
+      },
+      discardPile: [
+        {
+          playerId: "human-a",
+          type: "single",
+          cards: [card("spades-3")],
+          primaryRank: "3",
+          highCard: card("spades-3"),
+          length: 1
+        }
+      ],
+      hands: {
+        ...fourSeatGame().hands,
+        "bot-a": [card("clubs-4"), card("diamonds-5"), card("hearts-K")],
+        "bot-b": [card("clubs-A"), card("diamonds-A")],
+        "human-b": [card("clubs-7"), card("diamonds-7")]
+      }
+    };
+    const changedHiddenCards: GameState = {
+      ...baseState,
+      hands: {
+        ...baseState.hands,
+        "bot-b": [card("clubs-2"), card("diamonds-2")],
+        "human-b": [card("clubs-8"), card("diamonds-8")]
+      }
+    };
+
+    expect(createBotTurnView(baseState, "bot-a")).toEqual(createBotTurnView(changedHiddenCards, "bot-a"));
+    expect(nextBotAction(baseState)).toEqual(nextBotAction(changedHiddenCards));
   });
 });

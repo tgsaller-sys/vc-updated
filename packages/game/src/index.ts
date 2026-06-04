@@ -12,6 +12,7 @@ export {
   botTurnDelayMs,
   chooseBotAction,
   chooseEasyBotAction,
+  chooseHardBotAction,
   chooseMediumBotAction,
   createBotTurnView,
   isBotPlayer,

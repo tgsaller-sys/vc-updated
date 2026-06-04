@@ -27,7 +27,7 @@ export type PlayerId = string;
 
 export type PlayerKind = "human" | "bot";
 
-export type BotStrategy = "easy" | "medium";
+export type BotStrategy = "easy" | "medium" | "hard";
 
 export interface Player {
   readonly id: PlayerId;

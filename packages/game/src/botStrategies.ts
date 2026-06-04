@@ -1,44 +1,12 @@
-import { getLegalMoves } from "./rules";
 import { compareMovesByCost, compareMovesForBlocking, protectedBombCardIds, spendsStrongCards } from "./botMoveScoring";
-import type { Card, CardMove, GameAction, Move, PlayerId } from "./types";
+import { actionForPlay, cardMovesForView, movesForView } from "./botStrategyCore";
+import type { BotTurnView, EasyBotOptions } from "./botStrategyCore";
+import type { CardMove, GameAction } from "./types";
 
-export interface BotTurnView {
-  readonly actorId: PlayerId;
-  readonly hand: readonly Card[];
-  readonly currentTablePlay: CardMove | null;
-  readonly isLeading: boolean;
-  readonly opponentCardCounts: readonly number[];
-  readonly requiredOpeningCard?: Card;
-}
-
-export interface EasyBotOptions {
-  readonly random?: () => number;
-  readonly passProbability?: number;
-}
+export type { BotTurnView, EasyBotOptions } from "./botStrategyCore";
 
 function randomIndex(length: number, random: () => number): number {
   return Math.min(Math.floor(random() * length), length - 1);
-}
-
-function movesForView(view: BotTurnView): readonly Move[] {
-  return getLegalMoves({
-    hand: view.hand,
-    currentTablePlay: view.currentTablePlay,
-    isLeading: view.isLeading,
-    options: view.requiredOpeningCard === undefined ? {} : { requiredOpeningCard: view.requiredOpeningCard }
-  });
-}
-
-function cardMovesForView(view: BotTurnView): readonly CardMove[] {
-  return movesForView(view).filter((move): move is CardMove => move.type !== "pass");
-}
-
-function actionForPlay(actorId: PlayerId, play: CardMove): GameAction {
-  return {
-    type: "play-cards",
-    actorId,
-    cardIds: play.cards.map((card) => card.id)
-  };
 }
 
 /**
