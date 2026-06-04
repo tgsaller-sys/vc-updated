@@ -330,11 +330,24 @@ button {
   color: #6a7280;
 }
 
+.bot-name-input {
+  min-block-size: 2.25rem;
+  min-inline-size: 0;
+  border: 1px solid rgb(23 32 47 / 0.2);
+  border-radius: 6px;
+  padding-inline: 0.45rem;
+  background: #ffffff;
+  color: #17202f;
+  font: inherit;
+  font-weight: 800;
+}
+
 .hand-actions button,
 .lobby-controls button,
 .lobby-controls input,
 .max-cards-control,
-.seed-control {
+.seed-control,
+.bot-delay-control {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -358,6 +371,11 @@ button {
   background: rgb(255 255 255 / 0.72);
 }
 
+.bot-delay-control {
+  gap: 0.4rem;
+  background: rgb(255 255 255 / 0.72);
+}
+
 .hand-actions button,
 .lobby-controls button {
   cursor: pointer;
@@ -377,7 +395,8 @@ button {
 }
 
 .max-cards-control input,
-.seed-control input {
+.seed-control input,
+.bot-delay-control input {
   min-block-size: auto;
   inline-size: 4.4rem;
   border: 0;
@@ -387,6 +406,10 @@ button {
 
 .seed-control input {
   inline-size: 7.5rem;
+}
+
+.bot-delay-control input {
+  inline-size: 3.8rem;
 }
 
 .hand-actions button:disabled {
@@ -405,9 +428,9 @@ button {
 }
 
 .error-text,
-.winner-text,
 .notice-text,
-.no-legal-play-text {
+.no-legal-play-text,
+.placement-list {
   margin: 0;
   font-weight: 800;
 }
@@ -416,16 +439,32 @@ button {
   color: #a72531;
 }
 
-.winner-text {
-  color: #236f4e;
-}
-
 .notice-text {
   color: #3e4856;
 }
 
 .no-legal-play-text {
   color: #7a4c11;
+}
+
+.placement-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.7rem;
+  padding: 0;
+  color: #236f4e;
+  font-size: 0.92rem;
+  list-style: none;
+}
+
+.placement-list li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.placement-list span {
+  color: #3e4856;
 }
 
 @media (max-width: 680px) {
@@ -520,10 +559,17 @@ button {
     font-size: 0.78rem;
   }
 
+  .bot-name-input {
+    inline-size: 100%;
+    min-block-size: 2.15rem;
+    font-size: 0.78rem;
+  }
+
   .lobby-controls button,
   .lobby-controls input,
   .max-cards-control,
-  .seed-control {
+  .seed-control,
+  .bot-delay-control {
     inline-size: 100%;
     min-block-size: 2.35rem;
     padding: 0.45rem 0.55rem;
@@ -657,8 +703,8 @@ button {
 
   .notice-text,
   .error-text,
-  .winner-text,
-  .no-legal-play-text {
+  .no-legal-play-text,
+  .placement-list {
     font-size: 0.84rem;
   }
 }

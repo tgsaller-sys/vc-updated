@@ -3,7 +3,6 @@ import { Play, RotateCcw, Send, SkipForward, Users } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CardView } from "@vc/ui";
 import {
-  botTurnDelayMs,
   getLegalMovesForPlayer,
   isBombPlay,
   maxPlayers,
@@ -30,6 +29,11 @@ import { buildHead } from "./buildInfo";
 
 const maxSeed = 4294967295;
 type LobbySeatType = "human" | BotStrategy;
+
+function ordinalLabel(index: number): string {
+  const labels = ["First", "Second", "Third", "Fourth"];
+  return labels[index] ?? `${index + 1}th`;
+}
 
 function botSeatName(strategy: BotStrategy, botNumber: number): string {
   const label = strategy === "easy" ? "Easy" : strategy === "medium" ? "Medium" : "Hard";
@@ -128,6 +132,8 @@ export function App() {
   const setPlayerName = useUiStore((state) => state.setPlayerName);
   const maxCardsPerPlayer = useUiStore((state) => state.maxCardsPerPlayer);
   const setMaxCardsPerPlayer = useUiStore((state) => state.setMaxCardsPerPlayer);
+  const botTurnDelayMs = useUiStore((state) => state.botTurnDelayMs);
+  const setBotTurnDelaySeconds = useUiStore((state) => state.setBotTurnDelaySeconds);
   const gameSeed = useUiStore((state) => state.gameSeed);
   const setGameSeed = useUiStore((state) => state.setGameSeed);
   const lobbyCode = useUiStore((state) => state.lobbyCode);
@@ -148,6 +154,7 @@ export function App() {
   const localPlayer = game.players.find((player) => player.id === localPlayerId) ?? game.players[0];
   const activePlayerId = localPlayer?.id ?? "";
   const activeHand = game.hands[activePlayerId] ?? [];
+  const botTurnDelaySeconds = botTurnDelayMs / 1000;
   const sortedActiveHand = useMemo(() => sortCardsForPlay(activeHand), [activeHand]);
   const opponents = useMemo(
     () => game.players.filter((player) => player.id !== localPlayerId),
@@ -208,6 +215,20 @@ export function App() {
     game.winnerId === null
       ? null
       : (game.players.find((player) => player.id === game.winnerId)?.name ?? game.winnerId);
+  const placementRows = useMemo(() => {
+    const finishedPlayerIds = game.finishedPlayerIds ?? [];
+    const remainingPlayerIds =
+      game.phase === "finished"
+        ? game.turnOrder.filter((playerId) => !finishedPlayerIds.includes(playerId))
+        : [];
+    const rankedPlayerIds = [...finishedPlayerIds, ...remainingPlayerIds];
+
+    return rankedPlayerIds.map((playerId, index) => ({
+      label: `${ordinalLabel(index)} ${game.phase === "finished" ? "place" : "out"}`,
+      name: game.players.find((player) => player.id === playerId)?.name ?? playerId,
+      playerId
+    }));
+  }, [game.finishedPlayerIds, game.phase, game.players, game.turnOrder]);
   const turnCalloutText =
     game.phase === "playing" && game.currentTurn !== null
       ? isActiveTurn
@@ -307,13 +328,13 @@ export function App() {
     }, botTurnDelayMs);
 
     return () => window.clearTimeout(timeoutId);
-  }, [game, syncMode]);
+  }, [botTurnDelayMs, game, syncMode]);
 
   async function dispatch(action: GameAction) {
     try {
       setActionStatus("Sending action...");
       if (syncMode === "remote") {
-        const nextState = await dispatchValidatedRemoteAction(game, action);
+        const nextState = await dispatchValidatedRemoteAction(game, action, { botTurnDelayMs });
         setGame(nextState);
       } else {
         setGame(applyAction(game, action));
@@ -353,6 +374,11 @@ export function App() {
     });
   }
 
+  function fallbackBotName(botStrategy: BotStrategy, player: Player): string {
+    const botNumber = game.players.filter((nextPlayer) => nextPlayer.kind === "bot").indexOf(player) + 1;
+    return botSeatName(botStrategy, botNumber);
+  }
+
   function updateLobbySeat(player: Player | undefined, seatType: LobbySeatType) {
     if (player?.kind !== "bot") {
       if (player === undefined && seatType !== "human") {
@@ -367,10 +393,23 @@ export function App() {
       return;
     }
 
-    const botNumber = game.players.filter((nextPlayer) => nextPlayer.kind === "bot").indexOf(player) + 1;
+    const nextBotName = player.name.trim() || fallbackBotName(seatType, player);
     void dispatch({
       type: "join",
-      player: createBotPlayer(player.id, botSeatName(seatType, botNumber), seatType)
+      player: createBotPlayer(player.id, nextBotName, seatType)
+    });
+  }
+
+  function renameBot(player: Player, nextName: string) {
+    if (player.kind !== "bot") {
+      return;
+    }
+
+    const botStrategy = player.botStrategy ?? "easy";
+    const nextBotName = nextName.trim() || fallbackBotName(botStrategy, player);
+    void dispatch({
+      type: "join",
+      player: createBotPlayer(player.id, nextBotName, botStrategy)
     });
   }
 
@@ -557,6 +596,19 @@ export function App() {
                 aria-label="Random seed"
               />
             </label>
+            <label className="bot-delay-control">
+              <span>Bot delay</span>
+              <input
+                type="number"
+                min={0}
+                max={30}
+                step={0.5}
+                value={botTurnDelaySeconds}
+                onChange={(event) => setBotTurnDelaySeconds(event.currentTarget.valueAsNumber)}
+                aria-label="Bot delay in seconds"
+              />
+              <span>s</span>
+            </label>
           </section>
         ) : null}
 
@@ -572,6 +624,15 @@ export function App() {
                     Seat {index + 1}
                     <strong>{player?.name ?? "Open human seat"}</strong>
                   </span>
+                  {player?.kind === "bot" ? (
+                    <input
+                      className="bot-name-input"
+                      defaultValue={player.name}
+                      maxLength={24}
+                      onBlur={(event) => renameBot(player, event.currentTarget.value)}
+                      aria-label={`Seat ${index + 1} bot name`}
+                    />
+                  ) : null}
                   <select
                     value={seatType}
                     disabled={isJoinedHuman}
@@ -728,10 +789,15 @@ export function App() {
             ))}
           </motion.div>
           {error !== null ? <p className="error-text">{error}</p> : null}
-          {game.winnerId !== null ? (
-            <p className="winner-text">
-              {game.phase === "finished" ? "Winner" : "First out"}: {winnerName}
-            </p>
+          {placementRows.length > 0 ? (
+            <ol className="placement-list" aria-label="Player placement order">
+              {placementRows.map((row) => (
+                <li key={row.playerId}>
+                  <span>{row.label}</span>
+                  <strong>{row.name}</strong>
+                </li>
+              ))}
+            </ol>
           ) : null}
         </section>
       </section>

@@ -26,6 +26,10 @@ function wait(durationMs: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, durationMs));
 }
 
+interface DispatchRemoteActionOptions {
+  readonly botTurnDelayMs?: number;
+}
+
 export async function signInAnonymously(): Promise<string> {
   if (supabase === null) {
     throw new Error("Supabase is not configured.");
@@ -143,9 +147,11 @@ async function persistValidatedRemoteAction(
 
 export async function dispatchValidatedRemoteAction(
   state: GameState,
-  action: GameAction
+  action: GameAction,
+  options: DispatchRemoteActionOptions = {}
 ): Promise<GameState> {
   let nextState = await persistValidatedRemoteAction(state, action);
+  const nextBotTurnDelayMs = options.botTurnDelayMs ?? botTurnDelayMs;
 
   for (let turn = 0; turn < maximumAutomaticBotTurns; turn += 1) {
     const botAction = nextBotAction(nextState);
@@ -154,7 +160,7 @@ export async function dispatchValidatedRemoteAction(
       return nextState;
     }
 
-    await wait(botTurnDelayMs);
+    await wait(nextBotTurnDelayMs);
     nextState = await persistValidatedRemoteAction(nextState, botAction);
   }
 
