@@ -509,10 +509,11 @@ export function App() {
     <main className="app-shell">
       <section className="tabletop" aria-label="VC game table">
         <header className="top-bar">
-          <div>
+          <div className="brand-block">
             <p className="eyebrow">Lobby {game.id}</p>
-            <p className="build-head">HEAD {buildHead}</p>
             <h1>VC</h1>
+            <p className="game-subtitle">Vietnamese Cards</p>
+            <p className="build-head">HEAD {buildHead}</p>
             <p className="lobby-status">{lobbyStatus}</p>
           </div>
           <div className="status-cluster" aria-label="Game status">
@@ -545,122 +546,147 @@ export function App() {
         {actionStatus !== null ? <p className="notice-text">{actionStatus}</p> : null}
 
         {game.phase === "lobby" ? (
-          <section className="lobby-controls" aria-label="Lobby controls">
-            <div className="lobby-control-row name-control-row">
-              <input
-                className="player-name-input"
-                value={playerName}
-                maxLength={24}
-                onChange={(event) => setPlayerName(event.target.value)}
-                placeholder="Your name"
-                aria-label="Your name"
-              />
-              <button type="button" onClick={savePlayerName}>
-                Save Name
-              </button>
-            </div>
-            <div className="lobby-control-row">
-              <button type="button" onClick={() => void createLobby()}>
-                Create Lobby
-              </button>
-              <input
-                className="lobby-code-input"
-                value={lobbyCode}
-                maxLength={8}
-                onChange={(event) => setLobbyCode(event.target.value)}
-                placeholder="Lobby code"
-                aria-label="Lobby code"
-              />
-              <button type="button" onClick={() => void joinLobby()}>
-                Join
-              </button>
-            </div>
-            <div className="lobby-control-row">
-              <label className="max-cards-control">
-                <span>Max cards</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={52}
-                  step={1}
-                  value={maxCardsPerPlayer}
-                  onChange={(event) => setMaxCardsPerPlayer(event.currentTarget.valueAsNumber)}
-                  aria-label="Maximum cards per player"
-                />
-              </label>
-            </div>
-            <div className="lobby-control-row">
-              <label className="seed-control">
-                <span>Seed</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={maxSeed}
-                  step={1}
-                  value={gameSeed}
-                  onChange={(event) => setGameSeed(event.currentTarget.value)}
-                  placeholder="Random"
-                  aria-label="Random seed"
-                />
-              </label>
-            </div>
-            <div className="lobby-control-row">
-              <label className="bot-delay-control">
-                <span>Bot delay</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={30}
-                  step={0.5}
-                  value={botTurnDelaySeconds}
-                  onChange={(event) => setBotTurnDelaySeconds(event.currentTarget.valueAsNumber)}
-                  aria-label="Bot delay in seconds"
-                />
-                <span>s</span>
-              </label>
-            </div>
-          </section>
-        ) : null}
-
-        {game.phase === "lobby" ? (
-          <section className="lobby-seats" aria-label="Lobby seats">
-            {lobbySeats.map((player, index) => {
-              const seatType = player?.kind === "bot" ? (player.botStrategy ?? "easy") : "human";
-              const isJoinedHuman = player !== undefined && player.kind !== "bot";
-
-              return (
-                <label className="lobby-seat" key={player?.id ?? `open-seat-${index}`}>
-                  <span>
-                    Seat {index + 1}
-                    <strong>{player?.name ?? "Open human seat"}</strong>
-                  </span>
-                  {player?.kind === "bot" ? (
+          <section className="lobby-layout" aria-label="Lobby setup">
+            <div className="lobby-panel setup-panel">
+              <div className="panel-heading">
+                <h2>Setup</h2>
+              </div>
+              <section className="lobby-controls" aria-label="Lobby controls">
+                <div className="lobby-control-row name-control-row">
+                  <input
+                    className="player-name-input"
+                    value={playerName}
+                    maxLength={24}
+                    onChange={(event) => setPlayerName(event.target.value)}
+                    placeholder="Your name"
+                    aria-label="Your name"
+                  />
+                  <button className="button-secondary button-small" type="button" onClick={savePlayerName}>
+                    Save Name
+                  </button>
+                </div>
+                <div className="lobby-control-row">
+                  <button className="button-primary" type="button" onClick={() => void createLobby()}>
+                    Create Lobby
+                  </button>
+                  <input
+                    className="lobby-code-input"
+                    value={lobbyCode}
+                    maxLength={8}
+                    onChange={(event) => setLobbyCode(event.target.value)}
+                    placeholder="Lobby code"
+                    aria-label="Lobby code"
+                  />
+                  <button className="button-secondary" type="button" onClick={() => void joinLobby()}>
+                    Join
+                  </button>
+                </div>
+                <div className="lobby-control-row">
+                  <label className="max-cards-control">
+                    <span>Max cards</span>
                     <input
-                      className="bot-name-input"
-                      defaultValue={player.name}
-                      maxLength={24}
-                      onBlur={(event) => renameBot(player, event.currentTarget.value)}
-                      aria-label={`Seat ${index + 1} bot name`}
+                      type="number"
+                      min={1}
+                      max={52}
+                      step={1}
+                      value={maxCardsPerPlayer}
+                      onChange={(event) => setMaxCardsPerPlayer(event.currentTarget.valueAsNumber)}
+                      aria-label="Maximum cards per player"
                     />
-                  ) : null}
-                  <select
-                    value={seatType}
-                    disabled={isJoinedHuman}
-                    onChange={(event) => updateLobbySeat(player, event.currentTarget.value as LobbySeatType)}
-                    aria-label={`Seat ${index + 1} player type`}
-                  >
-                    <option value="human">Human</option>
-                    <option value="easy">Easy Bot</option>
-                    <option value="medium">Medium Bot</option>
-                    <option value="hard">Hard Bot</option>
-                  </select>
-                </label>
-              );
-            })}
+                  </label>
+                </div>
+                <div className="lobby-control-row">
+                  <label className="seed-control">
+                    <span>Seed</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={maxSeed}
+                      step={1}
+                      value={gameSeed}
+                      onChange={(event) => setGameSeed(event.currentTarget.value)}
+                      placeholder="Random"
+                      aria-label="Random seed"
+                    />
+                  </label>
+                </div>
+                <div className="lobby-control-row">
+                  <label className="bot-delay-control">
+                    <span>Bot delay</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={30}
+                      step={0.5}
+                      value={botTurnDelaySeconds}
+                      onChange={(event) => setBotTurnDelaySeconds(event.currentTarget.valueAsNumber)}
+                      aria-label="Bot delay in seconds"
+                    />
+                    <span>s</span>
+                  </label>
+                </div>
+              </section>
+              <div className="lobby-start-actions">
+                <button className="button-primary" type="button" onClick={startGame}>
+                  <Play size={18} aria-hidden="true" />
+                  Start
+                </button>
+                {syncMode === "local" ? (
+                  <button className="button-secondary icon-button" type="button" onClick={resetDemo} aria-label="Reset demo">
+                    <RotateCcw size={18} aria-hidden="true" />
+                  </button>
+                ) : null}
+              </div>
+              {error !== null ? <p className="error-text">{error}</p> : null}
+            </div>
+
+            <div className="lobby-panel table-preview-panel">
+              <div className="panel-heading">
+                <h2>Seats</h2>
+              </div>
+              <div className="felt-preview">
+                <section className="lobby-seats" aria-label="Lobby seats">
+                  {lobbySeats.map((player, index) => {
+                    const seatType = player?.kind === "bot" ? (player.botStrategy ?? "easy") : "human";
+                    const isJoinedHuman = player !== undefined && player.kind !== "bot";
+
+                    return (
+                      <label className="lobby-seat" key={player?.id ?? `open-seat-${index}`}>
+                        <span>
+                          Seat {index + 1}
+                          <strong>{player?.name ?? "Open human seat"}</strong>
+                        </span>
+                        {player?.kind === "bot" ? (
+                          <input
+                            className="bot-name-input"
+                            defaultValue={player.name}
+                            maxLength={24}
+                            onBlur={(event) => renameBot(player, event.currentTarget.value)}
+                            aria-label={`Seat ${index + 1} bot name`}
+                          />
+                        ) : null}
+                        <select
+                          value={seatType}
+                          disabled={isJoinedHuman}
+                          onChange={(event) => updateLobbySeat(player, event.currentTarget.value as LobbySeatType)}
+                          aria-label={`Seat ${index + 1} player type`}
+                        >
+                          <option value="human">Human</option>
+                          <option value="easy">Easy Bot</option>
+                          <option value="medium">Medium Bot</option>
+                          <option value="hard">Hard Bot</option>
+                        </select>
+                      </label>
+                    );
+                  })}
+                </section>
+              </div>
+            </div>
           </section>
         ) : null}
 
-        <section className="center-table" aria-label="Table">
+        {game.phase !== "lobby" ? (
+          <section className="center-table" aria-label="Table">
           <AnimatePresence mode="popLayout">
             {winnerName !== null && game.phase === "finished" ? (
               <motion.div
@@ -754,26 +780,19 @@ export function App() {
             </div>
           </div>
         </section>
+        ) : null}
 
-        <section className="hand-panel" aria-label="Your hand">
+        {game.phase !== "lobby" ? (
+          <section className="hand-panel" aria-label="Your hand">
           <div className="hand-actions">
-            {game.phase === "lobby" ? (
-              <button type="button" onClick={startGame}>
-                <Play size={18} aria-hidden="true" />
-                Start
-              </button>
-            ) : (
-              <>
-                <button type="button" disabled={!canUseHumanControls || selectedCards.length === 0} onClick={playSelectedCards}>
-                  <Send size={18} aria-hidden="true" />
-                  Play {selectedCards.length}
-                </button>
-                <button type="button" disabled={!canUseHumanControls || game.currentLeadingPlay === null} onClick={skipTurn}>
-                  <SkipForward size={18} aria-hidden="true" />
-                  {skipLabel}
-                </button>
-              </>
-            )}
+            <button type="button" disabled={!canUseHumanControls || selectedCards.length === 0} onClick={playSelectedCards}>
+              <Send size={18} aria-hidden="true" />
+              Play {selectedCards.length}
+            </button>
+            <button type="button" disabled={!canUseHumanControls || game.currentLeadingPlay === null} onClick={skipTurn}>
+              <SkipForward size={18} aria-hidden="true" />
+              {skipLabel}
+            </button>
             {syncMode === "local" ? (
               <button type="button" onClick={resetDemo} aria-label="Reset demo">
                 <RotateCcw size={18} aria-hidden="true" />
@@ -810,6 +829,7 @@ export function App() {
             </ol>
           ) : null}
         </section>
+        ) : null}
       </section>
     </main>
   );

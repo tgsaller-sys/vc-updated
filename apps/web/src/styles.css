@@ -1,6 +1,6 @@
 :root {
   color: #17202f;
-  background: #f7f3ec;
+  background: #e9eee6;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
@@ -14,23 +14,55 @@
 body {
   margin: 0;
   min-inline-size: 320px;
+  background:
+    radial-gradient(circle at top left, rgb(43 135 95 / 0.16), transparent 20rem),
+    #e9eee6;
 }
 
 button {
   font: inherit;
 }
 
+button,
+input,
+select {
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgb(255 212 71 / 0.72);
+  outline-offset: 2px;
+}
+
 .app-shell {
   min-block-size: 100vh;
   padding: clamp(1rem, 2vw, 2rem);
+  display: flex;
+  justify-content: center;
 }
 
 .tabletop {
   display: grid;
-  grid-template-rows: auto auto minmax(16rem, 1fr) auto;
+  grid-template-rows: auto auto auto minmax(16rem, 1fr) auto;
   gap: 1rem;
+  inline-size: min(1180px, 100%);
   min-block-size: calc(100vh - clamp(2rem, 4vw, 4rem));
   overflow: hidden;
+  border: 1px solid rgb(23 32 47 / 0.12);
+  border-radius: 12px;
+  padding: clamp(0.8rem, 2vw, 1.25rem);
+  background: rgb(248 246 240 / 0.9);
+  box-shadow: 0 24px 60px rgb(23 32 47 / 0.14);
 }
 
 .top-bar,
@@ -45,8 +77,19 @@ button {
 
 .top-bar h1 {
   margin: 0;
-  font-size: clamp(2.8rem, 7vw, 5.2rem);
-  line-height: 0.9;
+  font-size: clamp(2.35rem, 5vw, 3.8rem);
+  line-height: 0.95;
+}
+
+.brand-block {
+  min-inline-size: 12rem;
+}
+
+.game-subtitle {
+  margin: 0.25rem 0 0;
+  color: #2b875f;
+  font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+  font-weight: 900;
 }
 
 .eyebrow {
@@ -59,7 +102,7 @@ button {
 }
 
 .build-head {
-  margin: 0 0 0.35rem;
+  margin: 0.4rem 0 0;
   color: #17202f;
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
   font-size: 0.82rem;
@@ -67,9 +110,10 @@ button {
 }
 
 .lobby-status {
-  margin: 0.55rem 0 0;
+  margin: 0.35rem 0 0;
   color: #3e4856;
   font-weight: 800;
+  font-size: 0.92rem;
 }
 
 .status-cluster {
@@ -88,7 +132,8 @@ button {
 }
 
 .status-cluster span {
-  padding: 0.55rem 0.7rem;
+  padding: 0.42rem 0.6rem;
+  font-size: 0.84rem;
   font-weight: 700;
 }
 
@@ -279,10 +324,41 @@ button {
   justify-content: start;
 }
 
+.lobby-layout {
+  display: grid;
+  grid-template-columns: minmax(18rem, 0.8fr) minmax(22rem, 1.2fr);
+  gap: clamp(0.9rem, 2vw, 1.25rem);
+  align-items: stretch;
+}
+
+.lobby-panel {
+  display: grid;
+  align-content: start;
+  gap: 0.85rem;
+  border: 1px solid rgb(23 32 47 / 0.13);
+  border-radius: 10px;
+  padding: clamp(0.85rem, 2vw, 1rem);
+  background: rgb(255 255 255 / 0.78);
+  box-shadow: 0 14px 36px rgb(37 45 58 / 0.1);
+}
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.panel-heading h2 {
+  margin: 0;
+  color: #17202f;
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
 .lobby-controls {
   display: grid;
-  gap: 0.5rem;
-  justify-items: start;
+  gap: 0.65rem;
 }
 
 .lobby-control-row {
@@ -292,20 +368,41 @@ button {
   gap: 0.55rem;
 }
 
+.lobby-start-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding-block-start: 0.2rem;
+}
+
+.felt-preview {
+  min-block-size: 100%;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  border-radius: 10px;
+  padding: clamp(0.75rem, 2vw, 1rem);
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.08) 25%, transparent 25%) 0 0 / 12px 12px,
+    #216345;
+  box-shadow:
+    inset 0 0 0 1px rgb(23 32 47 / 0.2),
+    inset 0 18px 40px rgb(255 255 255 / 0.08);
+}
+
 .lobby-seats {
-  justify-content: start;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
 }
 
 .lobby-seat {
   display: grid;
-  gap: 0.4rem;
-  min-inline-size: 12rem;
-  border: 1px solid rgb(23 32 47 / 0.16);
+  gap: 0.5rem;
+  min-inline-size: 0;
+  border: 1px solid rgb(255 255 255 / 0.5);
   border-radius: 8px;
-  padding: 0.65rem;
-  background: rgb(255 255 255 / 0.72);
-  box-shadow: 0 10px 26px rgb(37 45 58 / 0.08);
+  padding: 0.7rem;
+  background: rgb(255 255 255 / 0.9);
+  box-shadow: 0 12px 28px rgb(23 32 47 / 0.16);
 }
 
 .lobby-seat span {
@@ -332,6 +429,12 @@ button {
   color: #17202f;
   font: inherit;
   font-weight: 800;
+}
+
+.lobby-seat select:hover:not(:disabled),
+.bot-name-input:hover,
+.lobby-controls input:hover {
+  border-color: rgb(43 135 95 / 0.48);
 }
 
 .lobby-seat select:disabled {
@@ -367,6 +470,38 @@ button {
   background: #ffffff;
   color: #17202f;
   font-weight: 800;
+}
+
+button.button-primary {
+  border-color: #1e6f4b;
+  background: #2b875f;
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgb(43 135 95 / 0.24);
+}
+
+button.button-primary:hover:not(:disabled) {
+  background: #236f4e;
+}
+
+button.button-secondary {
+  background: #ffffff;
+  color: #17202f;
+}
+
+button.button-secondary:hover:not(:disabled) {
+  border-color: #2b875f;
+  background: #eef7f1;
+}
+
+button.button-small {
+  min-block-size: 2.3rem;
+  padding-inline: 0.7rem;
+  font-size: 0.86rem;
+}
+
+button.icon-button {
+  inline-size: 2.5rem;
+  padding-inline: 0;
 }
 
 .max-cards-control {
@@ -485,19 +620,26 @@ button {
   }
 
   .tabletop {
-    grid-template-rows: auto auto auto auto;
+    grid-template-rows: auto auto auto auto auto;
     gap: 0.55rem;
     min-block-size: auto;
     overflow: visible;
+    border-radius: 10px;
+    padding: 0.6rem;
   }
 
   .top-bar {
+    display: grid;
     align-items: start;
     gap: 0.45rem;
   }
 
   .top-bar h1 {
-    font-size: 2.25rem;
+    font-size: 2rem;
+  }
+
+  .game-subtitle {
+    font-size: 0.9rem;
   }
 
   .eyebrow {
@@ -535,6 +677,19 @@ button {
     font-size: 0.82rem;
   }
 
+  .lobby-layout {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .lobby-panel {
+    padding: 0.65rem;
+  }
+
+  .felt-preview {
+    padding: 0.55rem;
+  }
+
   .lobby-controls {
     align-items: stretch;
     display: grid;
@@ -555,7 +710,7 @@ button {
 
   .lobby-seats {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 0.45rem;
   }
 
