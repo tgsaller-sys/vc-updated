@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Play, RotateCcw, Send, SkipForward, Users } from "lucide-react";
+import { BookOpen, Play, RotateCcw, Send, SkipForward, Users, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CardView } from "@vc/ui";
 import {
@@ -148,6 +148,7 @@ export function App() {
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [passNotice, setPassNotice] = useState<string | null>(null);
   const [skipLabel, setSkipLabel] = useState(() => pickSkipLabel());
+  const [isRulesOpen, setIsRulesOpen] = useState(false);
   const lastPassNoticeKey = useRef<string | null>(null);
   const preferredPlayerName = playerName.trim() || `Player ${localPlayerId.slice(0, 4)}`;
   const [game, setGame] = useState(() => createDemoGame(localPlayerId, preferredPlayerName, createLobbyCode()));
@@ -235,6 +236,21 @@ export function App() {
         ? "Your turn!"
         : `${currentTurnName}'s turn`
       : null;
+
+  useEffect(() => {
+    if (!isRulesOpen) {
+      return undefined;
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsRulesOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isRulesOpen]);
 
   useEffect(() => {
     if (game.lastEvent?.type !== "skip") {
@@ -517,6 +533,10 @@ export function App() {
             <p className="lobby-status">{lobbyStatus}</p>
           </div>
           <div className="status-cluster" aria-label="Game status">
+            <button className="button-ghost rules-button" type="button" onClick={() => setIsRulesOpen(true)}>
+              <BookOpen size={16} aria-hidden="true" />
+              Rules
+            </button>
             <span className="pill">{connectionLabel}</span>
             <span className="pill">{isRemoteLobby ? `Lobby ${lobbyCode}` : "Demo table"}</span>
             <span className="pill">
@@ -793,56 +813,119 @@ export function App() {
               </AnimatePresence>
             </div>
           </div>
-        </section>
+          </section>
         ) : null}
 
         {game.phase !== "lobby" ? (
           <section className="hand-panel" aria-label="Your hand">
-          <div className="hand-actions">
-            <button type="button" disabled={!canUseHumanControls || selectedCards.length === 0} onClick={playSelectedCards}>
-              <Send size={18} aria-hidden="true" />
-              Play {selectedCards.length}
-            </button>
-            <button type="button" disabled={!canUseHumanControls || game.currentLeadingPlay === null} onClick={skipTurn}>
-              <SkipForward size={18} aria-hidden="true" />
-              {skipLabel}
-            </button>
-            {syncMode === "local" ? (
-              <button className="button-ghost" type="button" onClick={resetDemo} aria-label="Reset demo">
-                <RotateCcw size={18} aria-hidden="true" />
+            <div className="hand-actions">
+              <button type="button" disabled={!canUseHumanControls || selectedCards.length === 0} onClick={playSelectedCards}>
+                <Send size={18} aria-hidden="true" />
+                Play {selectedCards.length}
               </button>
+              <button type="button" disabled={!canUseHumanControls || game.currentLeadingPlay === null} onClick={skipTurn}>
+                <SkipForward size={18} aria-hidden="true" />
+                {skipLabel}
+              </button>
+              {syncMode === "local" ? (
+                <button className="button-ghost" type="button" onClick={resetDemo} aria-label="Reset demo">
+                  <RotateCcw size={18} aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
+
+            {canUseHumanControls && !hasLegalCardPlay ? (
+              <p className="no-legal-play-text">
+                No legal play available.{game.currentLeadingPlay === null ? "" : " Pass to continue."}
+              </p>
             ) : null}
-          </div>
 
-          {canUseHumanControls && !hasLegalCardPlay ? (
-            <p className="no-legal-play-text">
-              No legal play available.{game.currentLeadingPlay === null ? "" : " Pass to continue."}
-            </p>
-          ) : null}
-
-          <motion.div layout className="hand">
-            {sortedActiveHand.map((card) => (
-              <CardView
-                key={card.id}
-                card={card}
-                selected={selectedCardIds.includes(card.id)}
-                disabled={game.phase !== "playing" || !canUseHumanControls}
-                onClick={(nextCard) => toggleCard(nextCard.id)}
-              />
-            ))}
-          </motion.div>
-          {error !== null ? <p className="error-text">{error}</p> : null}
-          {placementRows.length > 0 ? (
-            <ol className="placement-list" aria-label="Player placement order">
-              {placementRows.map((row) => (
-                <li key={row.playerId}>
-                  <span>{row.label}</span>
-                  <strong>{row.name}</strong>
-                </li>
+            <motion.div layout className="hand">
+              {sortedActiveHand.map((card) => (
+                <CardView
+                  key={card.id}
+                  card={card}
+                  selected={selectedCardIds.includes(card.id)}
+                  disabled={game.phase !== "playing" || !canUseHumanControls}
+                  onClick={(nextCard) => toggleCard(nextCard.id)}
+                />
               ))}
-            </ol>
-          ) : null}
-        </section>
+            </motion.div>
+            {error !== null ? <p className="error-text">{error}</p> : null}
+            {placementRows.length > 0 ? (
+              <ol className="placement-list" aria-label="Player placement order">
+                {placementRows.map((row) => (
+                  <li key={row.playerId}>
+                    <span>{row.label}</span>
+                    <strong>{row.name}</strong>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+          </section>
+        ) : null}
+
+        {isRulesOpen ? (
+          <div className="modal-backdrop" role="presentation" onMouseDown={() => setIsRulesOpen(false)}>
+            <section
+              className="panel rules-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="rules-title"
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <div className="rules-header">
+                <div>
+                  <p className="eyebrow">Current table rules</p>
+                  <h2 id="rules-title">VC Rules</h2>
+                </div>
+                <button className="button-ghost icon-button" type="button" onClick={() => setIsRulesOpen(false)} aria-label="Close rules">
+                  <X size={18} aria-hidden="true" />
+                </button>
+              </div>
+
+              <div className="rules-content">
+                <section>
+                  <h3>Turn Order</h3>
+                  <ul>
+                    <li>The player with the 3 of spades starts. If it is not in the deal, the lowest card starts.</li>
+                    <li>The opening play must include that starting card.</li>
+                    <li>When everyone else passes, the last player who played cards leads the next hand.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h3>Legal Plays</h3>
+                  <ul>
+                    <li>Singles, pairs, triples, straights of 3 or more, and bombs are playable.</li>
+                    <li>Pairs and triples must use matching ranks.</li>
+                    <li>2s may never be included in straights.</li>
+                    <li>Bombs are four of a kind or a straight of pairs.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h3>Beating Plays</h3>
+                  <ul>
+                    <li>After a play is set, the next play must match its format or pass.</li>
+                    <li>The highest card in the new play must beat the highest card in the previous play.</li>
+                    <li>Rank order starts at 3, then rises through ace, with 2 highest.</li>
+                    <li>Suit order is spades, clubs, diamonds, hearts.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h3>Passing And Locks</h3>
+                  <ul>
+                    <li>If you pass during a hand, you cannot play again until that hand resets.</li>
+                    <li>A straight all in one suit creates a lock: the next straight must also be all one suit.</li>
+                    <li>A single 2 can be beaten by a bomb.</li>
+                    <li>Players continue after someone goes out until the finishing order is set.</li>
+                  </ul>
+                </section>
+              </div>
+            </section>
+          </div>
         ) : null}
       </section>
     </main>
