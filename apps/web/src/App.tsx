@@ -517,13 +517,13 @@ export function App() {
             <p className="lobby-status">{lobbyStatus}</p>
           </div>
           <div className="status-cluster" aria-label="Game status">
-            <span>{connectionLabel}</span>
-            <span>{isRemoteLobby ? `Lobby ${lobbyCode}` : "Demo table"}</span>
-            <span>
+            <span className="pill">{connectionLabel}</span>
+            <span className="pill">{isRemoteLobby ? `Lobby ${lobbyCode}` : "Demo table"}</span>
+            <span className="pill">
               {game.players.length} player{game.players.length === 1 ? "" : "s"}
             </span>
-            <span>{turnLabel}</span>
-            <span>{game.phase}</span>
+            <span className="pill">{turnLabel}</span>
+            <span className="pill">{game.phase}</span>
           </div>
         </header>
 
@@ -532,7 +532,7 @@ export function App() {
             <motion.article
               layout
               key={player.id}
-              className={`player-pill ${game.currentTurn === player.id ? "is-turn" : ""}`}
+              className={`pill player-pill ${game.currentTurn === player.id ? "is-turn" : ""}`}
             >
               <Users size={16} aria-hidden="true" />
               <span>
@@ -547,7 +547,7 @@ export function App() {
 
         {game.phase === "lobby" ? (
           <section className="lobby-layout" aria-label="Lobby setup">
-            <div className="lobby-panel setup-panel">
+            <div className="panel lobby-panel setup-panel">
               <div className="panel-heading">
                 <h2>Setup</h2>
               </div>
@@ -632,7 +632,7 @@ export function App() {
                   Start
                 </button>
                 {syncMode === "local" ? (
-                  <button className="button-secondary icon-button" type="button" onClick={resetDemo} aria-label="Reset demo">
+                  <button className="button-ghost icon-button" type="button" onClick={resetDemo} aria-label="Reset demo">
                     <RotateCcw size={18} aria-hidden="true" />
                   </button>
                 ) : null}
@@ -640,20 +640,34 @@ export function App() {
               {error !== null ? <p className="error-text">{error}</p> : null}
             </div>
 
-            <div className="lobby-panel table-preview-panel">
+            <div className="panel lobby-panel table-preview-panel">
               <div className="panel-heading">
                 <h2>Seats</h2>
               </div>
               <div className="felt-preview">
+                <div className="felt-center" aria-hidden="true">
+                  <span>Table</span>
+                </div>
                 <section className="lobby-seats" aria-label="Lobby seats">
                   {lobbySeats.map((player, index) => {
                     const seatType = player?.kind === "bot" ? (player.botStrategy ?? "easy") : "human";
                     const isJoinedHuman = player !== undefined && player.kind !== "bot";
+                    const seatClassName = [
+                      "lobby-seat",
+                      `seat-${index + 1}`,
+                      player === undefined ? "is-empty" : "is-occupied",
+                      player?.kind === "bot" ? "is-bot" : ""
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
 
                     return (
-                      <label className="lobby-seat" key={player?.id ?? `open-seat-${index}`}>
-                        <span>
-                          Seat {index + 1}
+                      <label className={seatClassName} key={player?.id ?? `open-seat-${index}`}>
+                        <span className="seat-label-row">
+                          <span>Seat {index + 1}</span>
+                          {player?.kind === "bot" ? <span className="bot-badge">BOT</span> : null}
+                        </span>
+                        <span className="seat-name">
                           <strong>{player?.name ?? "Open human seat"}</strong>
                         </span>
                         {player?.kind === "bot" ? (
@@ -794,7 +808,7 @@ export function App() {
               {skipLabel}
             </button>
             {syncMode === "local" ? (
-              <button type="button" onClick={resetDemo} aria-label="Reset demo">
+              <button className="button-ghost" type="button" onClick={resetDemo} aria-label="Reset demo">
                 <RotateCcw size={18} aria-hidden="true" />
               </button>
             ) : null}
