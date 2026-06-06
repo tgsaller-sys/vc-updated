@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { BookOpen, Play, RotateCcw, Send, SkipForward, Users, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { CardView } from "@vc/ui";
 import {
   getLegalMovesForPlayer,
@@ -9,6 +10,7 @@ import {
   nextBotAction,
   reduceGameAction,
   sortCardsForPlay,
+  validatePlay,
   type GameAction,
   type GameState,
   type Player,
@@ -65,7 +67,7 @@ function pickSkipLabel(): string {
     return "Skip";
   }
 
-  return "Knucle-rap";
+  return "Knuckle-rap";
 }
 
 function createRandomSeed(): number {
@@ -95,16 +97,23 @@ interface OpponentHandProps {
   readonly isSkipped: boolean;
   readonly isTurn: boolean;
   readonly player: Player;
+  readonly seat: "top" | "left" | "right";
 }
 
-function OpponentHand({ cardCount, isSkipped, isTurn, player }: OpponentHandProps) {
+function OpponentHand({ cardCount, isSkipped, isTurn, player, seat }: OpponentHandProps) {
   const visibleCards = Array.from({ length: Math.min(cardCount, 12) }, (_value, index) => index);
 
   return (
-    <motion.article layout className={`opponent-hand ${isTurn ? "is-turn" : ""} ${isSkipped ? "is-skipped" : ""}`}>
+    <motion.article
+      layout
+      className={`opponent-hand opponent-seat-${seat} ${isTurn ? "is-turn" : ""} ${isSkipped ? "is-skipped" : ""}`}
+    >
       <div className="opponent-meta">
-        <span>{player.name}</span>
-        <strong>{cardCount}</strong>
+        <div>
+          <span>{player.name}</span>
+          <small>{cardCount} cards</small>
+        </div>
+        <strong>{player.kind === "bot" ? "BOT" : "HUMAN"}</strong>
       </div>
       <div className="opponent-card-row" aria-label={`${player.name} has ${cardCount} cards`}>
         <AnimatePresence initial={false}>
@@ -164,7 +173,6 @@ export function App() {
   const isActiveTurn = game.currentTurn === activePlayerId;
   const isBotTurn = game.players.find((player) => player.id === game.currentTurn)?.kind === "bot";
   const canUseHumanControls = isActiveTurn && !isBotTurn;
-  const isRemoteLobby = syncMode === "remote";
   const lobbySeats = useMemo(
     () => Array.from({ length: maxPlayers }, (_value, index) => game.players[index]),
     [game.players]
@@ -195,6 +203,14 @@ export function App() {
     () => sortedActiveHand.filter((card) => selectedCardIds.includes(card.id)),
     [selectedCardIds, sortedActiveHand]
   );
+  const canPlaySelectedCards =
+    canUseHumanControls &&
+    selectedCards.length > 0 &&
+    validatePlay(
+      game,
+      activePlayerId,
+      selectedCards.map((card) => card.id)
+    ).ok;
   const hasLegalCardPlay = useMemo(
     () =>
       !canUseHumanControls ||
@@ -704,7 +720,7 @@ export function App() {
         ) : null}
 
         {game.phase !== "lobby" ? (
-          <section className="center-table" aria-label="Table">
+          <section className="center-table game-table" aria-label="Table">
           <AnimatePresence mode="popLayout">
             {winnerName !== null && game.phase === "finished" ? (
               <motion.div
@@ -730,7 +746,7 @@ export function App() {
             ) : turnCalloutText !== null ? (
               <motion.div
                 key={`turn-${game.currentTurn ?? "waiting"}`}
-                className="turn-callout"
+                className={`turn-callout ${isActiveTurn ? "is-your-turn" : ""}`}
                 initial={{ opacity: 0, scale: 0.76, y: 12 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9 }}
@@ -753,18 +769,23 @@ export function App() {
               </motion.div>
             ) : null}
           </AnimatePresence>
-          <div className="table-focus">
+          <div className={`table-focus seat-layout opponents-${opponents.length}`}>
             <div className="opponents-panel" aria-label="Other players">
               <AnimatePresence initial={false}>
-                {opponents.map((player) => (
-                  <OpponentHand
-                    key={player.id}
-                    player={player}
-                    cardCount={game.hands[player.id]?.length ?? 0}
-                    isTurn={game.currentTurn === player.id}
-                    isSkipped={game.skippedPlayers.includes(player.id)}
-                  />
-                ))}
+                {opponents.map((player, index) => {
+                  const seat = index === 0 ? "top" : index === 1 ? "left" : "right";
+
+                  return (
+                    <OpponentHand
+                      key={player.id}
+                      player={player}
+                      seat={seat}
+                      cardCount={game.hands[player.id]?.length ?? 0}
+                      isTurn={game.currentTurn === player.id}
+                      isSkipped={game.skippedPlayers.includes(player.id)}
+                    />
+                  );
+                })}
               </AnimatePresence>
             </div>
 
@@ -779,16 +800,18 @@ export function App() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                   >
-                    Discard pile
+                    Center pile
                   </motion.div>
                 ) : (
-                  visibleDiscardPlay.cards.map((card) => (
+                  visibleDiscardPlay.cards.map((card, index) => (
                     <motion.div
                       layout
                       key={card.id}
-                      initial={{ opacity: 0, y: 60, rotate: -8 }}
-                      animate={{ opacity: 1, y: 0, rotate: 0 }}
+                      className="center-play-card"
+                      initial={{ opacity: 0, y: 70, scale: 0.9, rotate: -14 }}
+                      animate={{ opacity: 1, y: 0, scale: 1, rotate: (index - visibleDiscardPlay.cards.length / 2) * 5 }}
                       exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ type: "spring", stiffness: 430, damping: 28 }}
                     >
                       <CardView card={card} disabled />
                     </motion.div>
@@ -801,9 +824,9 @@ export function App() {
         ) : null}
 
         {game.phase !== "lobby" ? (
-          <section className="hand-panel" aria-label="Your hand">
+          <section className="hand-panel player-hand-tray" aria-label="Your hand">
             <div className="hand-actions">
-              <button type="button" disabled={!canUseHumanControls || selectedCards.length === 0} onClick={playSelectedCards}>
+              <button className="button-primary play-action" type="button" disabled={!canPlaySelectedCards} onClick={playSelectedCards}>
                 <Send size={18} aria-hidden="true" />
                 Play {selectedCards.length}
               </button>
@@ -814,6 +837,7 @@ export function App() {
               {syncMode === "local" ? (
                 <button className="button-ghost" type="button" onClick={resetDemo} aria-label="Reset demo">
                   <RotateCcw size={18} aria-hidden="true" />
+                  Undo
                 </button>
               ) : null}
             </div>
@@ -825,15 +849,24 @@ export function App() {
             ) : null}
 
             <motion.div layout className="hand">
-              {sortedActiveHand.map((card) => (
-                <CardView
-                  key={card.id}
-                  card={card}
-                  selected={selectedCardIds.includes(card.id)}
-                  disabled={game.phase !== "playing" || !canUseHumanControls}
-                  onClick={(nextCard) => toggleCard(nextCard.id)}
-                />
-              ))}
+              {sortedActiveHand.map((card, index) => {
+                const selected = selectedCardIds.includes(card.id);
+
+                return (
+                  <span
+                    key={card.id}
+                    className={`hand-card-shell ${selected ? "is-selected" : ""}`}
+                    style={{ "--fan-offset": index - (sortedActiveHand.length - 1) / 2 } as CSSProperties}
+                  >
+                    <CardView
+                      card={card}
+                      selected={selected}
+                      disabled={game.phase !== "playing" || !canUseHumanControls}
+                      onClick={(nextCard) => toggleCard(nextCard.id)}
+                    />
+                  </span>
+                );
+              })}
             </motion.div>
             {error !== null ? <p className="error-text">{error}</p> : null}
             {placementRows.length > 0 ? (

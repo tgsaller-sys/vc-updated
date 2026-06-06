@@ -6,7 +6,7 @@
   border-radius: 10px;
   background: transparent;
   cursor: pointer;
-  filter: drop-shadow(0 12px 18px rgb(20 26 35 / 0.2));
+  filter: drop-shadow(0 10px 16px rgb(20 26 35 / 0.16));
 }
 
 .vc-card:disabled {
@@ -27,7 +27,7 @@
 
 .vc-card.is-selected rect {
   fill: #fff9da;
-  stroke: #d79526;
+  stroke: var(--accent, #d79526);
 }
 
 .vc-card-red {
@@ -91,6 +91,6 @@
   .vc-card {
     inline-size: clamp(3.65rem, 18vw, 4.65rem);
     border-radius: 8px;
-    filter: drop-shadow(0 8px 12px rgb(20 26 35 / 0.18));
+    filter: drop-shadow(0 7px 10px rgb(20 26 35 / 0.14));
   }
 }
