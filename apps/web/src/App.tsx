@@ -173,24 +173,14 @@ export function App() {
     game.currentTurn === null
       ? "Waiting"
       : (game.players.find((player) => player.id === game.currentTurn)?.name ?? "Unknown player");
-  const lobbyStatus =
-    !supabaseConfig.hasUrl || !supabaseConfig.hasAnonKey
-      ? "Supabase env vars missing in this deployment"
-      : authStatus === "local"
-        ? "Supabase sign-in failed; using local demo mode"
-        : isRemoteLobby && game.phase === "lobby"
-          ? `In lobby ${lobbyCode} with ${game.players.length} player${game.players.length === 1 ? "" : "s"}`
-          : syncMode === "local"
-            ? "Local demo"
-            : `Connected to lobby ${lobbyCode}`;
-  const connectionLabel =
+  const tableStatusLabel =
     !supabaseConfig.hasUrl || !supabaseConfig.hasAnonKey
       ? "Setup needed"
       : authStatus === "checking"
         ? "Connecting"
         : syncMode === "remote"
-          ? "Online"
-          : "Local";
+          ? `Lobby ${lobbyCode}`
+          : "Local demo";
   const turnLabel =
     game.phase === "lobby"
       ? "Waiting to start"
@@ -199,6 +189,8 @@ export function App() {
         : isActiveTurn
           ? "Your turn"
           : `${currentTurnName}'s turn`;
+  const playerCountLabel = `${game.players.length} player${game.players.length === 1 ? "" : "s"}`;
+  const headerStatus = `${tableStatusLabel} • ${playerCountLabel} • ${turnLabel}`;
   const selectedCards = useMemo(
     () => sortedActiveHand.filter((card) => selectedCardIds.includes(card.id)),
     [selectedCardIds, sortedActiveHand]
@@ -529,21 +521,13 @@ export function App() {
             <p className="eyebrow">Lobby {game.id}</p>
             <h1>VC</h1>
             <p className="game-subtitle">Vietnamese Cards</p>
-            <p className="build-head">HEAD {buildHead}</p>
-            <p className="lobby-status">{lobbyStatus}</p>
           </div>
           <div className="status-cluster" aria-label="Game status">
             <button className="button-ghost rules-button" type="button" onClick={() => setIsRulesOpen(true)}>
               <BookOpen size={16} aria-hidden="true" />
               Rules
             </button>
-            <span className="pill">{connectionLabel}</span>
-            <span className="pill">{isRemoteLobby ? `Lobby ${lobbyCode}` : "Demo table"}</span>
-            <span className="pill">
-              {game.players.length} player{game.players.length === 1 ? "" : "s"}
-            </span>
-            <span className="pill">{turnLabel}</span>
-            <span className="pill">{game.phase}</span>
+            <p className="header-status">{headerStatus}</p>
           </div>
         </header>
 
@@ -647,9 +631,9 @@ export function App() {
                 </div>
               </section>
               <div className="lobby-start-actions">
-                <button className="button-primary" type="button" onClick={startGame}>
+                <button className="button-primary lobby-start-button" type="button" onClick={startGame}>
                   <Play size={18} aria-hidden="true" />
-                  Start
+                  Start Game
                 </button>
                 {syncMode === "local" ? (
                   <button className="button-ghost icon-button" type="button" onClick={resetDemo} aria-label="Reset demo">
@@ -864,6 +848,12 @@ export function App() {
             ) : null}
           </section>
         ) : null}
+
+        <footer className="version-footer">
+          <span title={`Build HEAD ${buildHead}`} aria-label={`Build HEAD ${buildHead}`}>
+            Version
+          </span>
+        </footer>
 
         {isRulesOpen ? (
           <div className="modal-backdrop" role="presentation" onMouseDown={() => setIsRulesOpen(false)}>
