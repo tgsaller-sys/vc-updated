@@ -110,6 +110,45 @@ describe("start options", () => {
 
     expect(result.validation.ok).toBe(false);
   });
+
+  it("restarts a game while preserving the current players", () => {
+    const started = startedGame(3);
+    const afterPlay = assertValidTransition(
+      reduceGameAction(started, {
+        type: "play-cards",
+        actorId: started.currentTurn ?? "player-a",
+        cardIds: [openingCardId(started)]
+      })
+    );
+    const restarted = assertValidTransition(
+      reduceGameAction(afterPlay, {
+        type: "restart",
+        actorId: "player-a",
+        seed: 7,
+        maxCardsPerPlayer: 5
+      })
+    );
+
+    expect(restarted.phase).toBe("playing");
+    expect(restarted.players).toEqual(started.players);
+    expect(restarted.discardPile).toEqual([]);
+    expect(restarted.currentLeadingPlay).toBeNull();
+    expect(restarted.skippedPlayers).toEqual([]);
+    expect(restarted.winnerId).toBeNull();
+    expect(restarted.finishedPlayerIds).toEqual([]);
+    expect(Object.values(restarted.hands).every((hand) => hand.length <= 5)).toBe(true);
+    expect(restarted.version).toBeGreaterThan(afterPlay.version);
+  });
+
+  it("only lets joined players restart a game", () => {
+    const result = reduceGameAction(startedGame(2), {
+      type: "restart",
+      actorId: "spectator",
+      seed: 7
+    });
+
+    expect(result.validation).toEqual({ ok: false, reason: "Only a joined player can start the game." });
+  });
 });
 
 describe("lobby seats", () => {

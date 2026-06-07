@@ -132,6 +132,12 @@ export type GameAction =
       readonly maxCardsPerPlayer?: number;
     }
   | {
+      readonly type: "restart";
+      readonly actorId: PlayerId;
+      readonly seed: number;
+      readonly maxCardsPerPlayer?: number;
+    }
+  | {
       readonly type: "play-cards";
       readonly actorId: PlayerId;
       readonly cardIds: readonly CardId[];

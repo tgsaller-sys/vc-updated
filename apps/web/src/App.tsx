@@ -386,6 +386,19 @@ export function App() {
     }
   }
 
+  function restartGame() {
+    try {
+      void dispatch({
+        type: "restart",
+        actorId: activePlayerId,
+        seed: parseSeed(gameSeed) ?? createRandomSeed(),
+        maxCardsPerPlayer
+      });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Invalid seed.");
+    }
+  }
+
   function savePlayerName() {
     void dispatch({ type: "join", player: createPlayer(localPlayerId, preferredPlayerName) });
   }
@@ -834,12 +847,10 @@ export function App() {
                 <SkipForward size={18} aria-hidden="true" />
                 {skipLabel}
               </button>
-              {syncMode === "local" ? (
-                <button className="button-ghost" type="button" onClick={resetDemo} aria-label="Reset demo">
-                  <RotateCcw size={18} aria-hidden="true" />
-                  Undo
-                </button>
-              ) : null}
+              <button className="button-secondary new-game-action" type="button" onClick={restartGame}>
+                <RotateCcw size={18} aria-hidden="true" />
+                New Game
+              </button>
             </div>
 
             {canUseHumanControls && !hasLegalCardPlay ? (

@@ -16,6 +16,7 @@ function actorIdForAction(action: GameAction): string {
     case "remove-player":
       return action.playerId;
     case "start":
+    case "restart":
     case "play-cards":
     case "skip":
       return action.actorId;

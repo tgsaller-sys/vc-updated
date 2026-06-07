@@ -71,6 +71,57 @@ function validateSeed(seed: number): ValidationResult {
   return { ok: true };
 }
 
+function dealNewGame(
+  state: GameState,
+  action: Extract<GameAction, { readonly type: "start" | "restart" }>
+): TransitionResult {
+  if (state.players.length < 2) {
+    return { state, validation: { ok: false, reason: "At least two players are required." } };
+  }
+
+  if (!state.players.some((player) => player.id === action.actorId)) {
+    return { state, validation: { ok: false, reason: "Only a joined player can start the game." } };
+  }
+
+  const seedValidation = validateSeed(action.seed);
+
+  if (!seedValidation.ok) {
+    return { state, validation: seedValidation };
+  }
+
+  const maxCardsValidation = validateMaxCardsPerPlayer(action.maxCardsPerPlayer);
+
+  if (!maxCardsValidation.ok) {
+    return { state, validation: maxCardsValidation };
+  }
+
+  const turnOrder = state.players.map((player) => player.id);
+  const deck = createShuffledDeck(action.seed);
+  const hands =
+    action.maxCardsPerPlayer === undefined
+      ? dealForVc(turnOrder, deck)
+      : dealForVcWithMaxCards(turnOrder, deck, action.maxCardsPerPlayer);
+  const startingPlayerId = findOpeningPlayer(hands);
+
+  return {
+    state: bumpVersion({
+      ...state,
+      phase: "playing",
+      hands,
+      deck: [],
+      discardPile: [],
+      currentTurn: startingPlayerId,
+      currentLeadingPlay: null,
+      skippedPlayers: [],
+      winnerId: null,
+      finishedPlayerIds: [],
+      lastEvent: null,
+      turnOrder
+    }),
+    validation: { ok: true }
+  };
+}
+
 /**
  * Applies one player action to immutable game state after validating it.
  * This is the authoritative transition function used by UI and server sync code.
@@ -128,49 +179,11 @@ export function reduceGameAction(
         return { state, validation: { ok: false, reason: "Game has already started." } };
       }
 
-      if (state.players.length < 2) {
-        return { state, validation: { ok: false, reason: "At least two players are required." } };
-      }
+      return dealNewGame(state, action);
+    }
 
-      if (!state.players.some((player) => player.id === action.actorId)) {
-        return { state, validation: { ok: false, reason: "Only a joined player can start the game." } };
-      }
-
-      const seedValidation = validateSeed(action.seed);
-
-      if (!seedValidation.ok) {
-        return { state, validation: seedValidation };
-      }
-
-      const maxCardsValidation = validateMaxCardsPerPlayer(action.maxCardsPerPlayer);
-
-      if (!maxCardsValidation.ok) {
-        return { state, validation: maxCardsValidation };
-      }
-
-      const turnOrder = state.players.map((player) => player.id);
-      const deck = createShuffledDeck(action.seed);
-      const hands =
-        action.maxCardsPerPlayer === undefined
-          ? dealForVc(turnOrder, deck)
-          : dealForVcWithMaxCards(turnOrder, deck, action.maxCardsPerPlayer);
-      const startingPlayerId = findOpeningPlayer(hands);
-
-      return {
-        state: bumpVersion({
-          ...state,
-          phase: "playing",
-          hands,
-          deck: [],
-          currentTurn: startingPlayerId,
-          currentLeadingPlay: null,
-          skippedPlayers: [],
-          finishedPlayerIds: [],
-          lastEvent: null,
-          turnOrder
-        }),
-        validation: { ok: true }
-      };
+    case "restart": {
+      return dealNewGame(state, action);
     }
 
     case "play-cards": {

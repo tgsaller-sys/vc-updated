@@ -44,6 +44,8 @@ function summarizeAction(action: GameAction): string {
       return `${action.playerId} connection=${action.connected}`;
     case "start":
       return `${action.actorId} starts seed=${action.seed}`;
+    case "restart":
+      return `${action.actorId} restarts seed=${action.seed}`;
   }
 }
 
