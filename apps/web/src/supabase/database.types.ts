@@ -43,6 +43,24 @@ export interface Database {
         Update: never;
         readonly Relationships: [];
       };
+      chat_messages: {
+        Row: {
+          readonly id: string;
+          readonly lobby_id: string;
+          readonly player_id: string;
+          readonly player_name: string;
+          readonly message: string;
+          readonly created_at: string;
+        };
+        Insert: {
+          readonly lobby_id: string;
+          readonly player_id: string;
+          readonly player_name: string;
+          readonly message: string;
+        };
+        Update: never;
+        readonly Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

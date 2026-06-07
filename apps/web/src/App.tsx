@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { BookOpen, Play, RotateCcw, Send, SkipForward, Users, X } from "lucide-react";
+import { BookOpen, MessageSquare, Play, RotateCcw, Send, SkipForward, Users, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { CardView } from "@vc/ui";
@@ -25,6 +25,12 @@ import {
   signInAnonymously,
   subscribeToGame
 } from "./supabase/gameRepository";
+import {
+  listChatMessages,
+  sendChatMessage,
+  subscribeToChatMessages,
+  type ChatMessage
+} from "./supabase/chatRepository";
 import { supabaseConfig } from "./supabase/client";
 import { useUiStore } from "./store/uiStore";
 import { buildHead } from "./buildInfo";
@@ -158,7 +164,12 @@ export function App() {
   const [passNotice, setPassNotice] = useState<string | null>(null);
   const [skipLabel, setSkipLabel] = useState(() => pickSkipLabel());
   const [isRulesOpen, setIsRulesOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<readonly ChatMessage[]>([]);
+  const [chatDraft, setChatDraft] = useState("");
+  const [chatError, setChatError] = useState<string | null>(null);
   const lastPassNoticeKey = useRef<string | null>(null);
+  const lastChatSentAt = useRef(0);
+  const chatMessagesEndRef = useRef<HTMLDivElement | null>(null);
   const preferredPlayerName = playerName.trim() || `Player ${localPlayerId.slice(0, 4)}`;
   const [game, setGame] = useState(() => createDemoGame(localPlayerId, preferredPlayerName, createLobbyCode()));
   const localPlayer = game.players.find((player) => player.id === localPlayerId) ?? game.players[0];
@@ -294,6 +305,10 @@ export function App() {
   }, [game.currentTurn, game.currentLeadingPlay]);
 
   useEffect(() => {
+    chatMessagesEndRef.current?.scrollIntoView({ block: "nearest" });
+  }, [chatMessages.length]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function authenticate() {
@@ -333,6 +348,55 @@ export function App() {
       setError(null);
     });
   }, [game.id, setError, syncMode]);
+
+  useEffect(() => {
+    if (syncMode !== "remote") {
+      setChatMessages([]);
+      setChatError(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    function addMessage(nextMessage: ChatMessage) {
+      setChatMessages((currentMessages) => {
+        if (currentMessages.some((message) => message.id === nextMessage.id)) {
+          return currentMessages;
+        }
+
+        return [...currentMessages, nextMessage].sort(
+          (left, right) => Date.parse(left.created_at) - Date.parse(right.created_at)
+        );
+      });
+    }
+
+    async function loadMessages() {
+      try {
+        const nextMessages = await listChatMessages(game.id);
+
+        if (cancelled) {
+          return;
+        }
+
+        setChatMessages(nextMessages);
+        setChatError(null);
+      } catch (caught) {
+        if (cancelled) {
+          return;
+        }
+
+        setChatError(caught instanceof Error ? caught.message : "Could not load chat.");
+      }
+    }
+
+    const unsubscribe = subscribeToChatMessages(game.id, addMessage);
+    void loadMessages();
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [game.id, syncMode]);
 
   useEffect(() => {
     if (syncMode !== "local") {
@@ -456,6 +520,41 @@ export function App() {
 
   function skipTurn() {
     void dispatch({ type: "skip", actorId: activePlayerId });
+  }
+
+  function handleChatDraftChange(nextDraft: string) {
+    setChatDraft(nextDraft.slice(0, 200));
+    setChatError(null);
+  }
+
+  async function sendCurrentChatMessage() {
+    const nextMessage = chatDraft.trim();
+
+    if (nextMessage.length === 0) {
+      return;
+    }
+
+    if (nextMessage.length > 200) {
+      setChatError("Messages must be 200 characters or less.");
+      return;
+    }
+
+    const now = Date.now();
+
+    if (now - lastChatSentAt.current < 1000) {
+      setChatError("Please wait a moment before sending another message.");
+      return;
+    }
+
+    try {
+      lastChatSentAt.current = now;
+      await sendChatMessage(game.id, activePlayerId, localPlayer?.name ?? preferredPlayerName, nextMessage);
+      setChatDraft("");
+      setChatError(null);
+    } catch (caught) {
+      lastChatSentAt.current = 0;
+      setChatError(caught instanceof Error ? caught.message : "Could not send message.");
+    }
   }
 
   function resetDemo() {
@@ -833,6 +932,65 @@ export function App() {
               </AnimatePresence>
             </div>
           </div>
+          </section>
+        ) : null}
+
+        {game.phase !== "lobby" ? (
+          <section className="panel chat-panel" aria-label="Lobby chat">
+            <div className="chat-heading">
+              <h2>
+                <MessageSquare size={16} aria-hidden="true" />
+                Chat
+              </h2>
+              <span>{syncMode === "remote" ? "Lobby" : "Online only"}</span>
+            </div>
+
+            <div className="chat-messages" aria-live="polite">
+              {syncMode !== "remote" ? (
+                <p className="chat-empty">Create or join an online lobby to chat.</p>
+              ) : chatMessages.length === 0 ? (
+                <p className="chat-empty">No messages yet.</p>
+              ) : (
+                chatMessages.map((chatMessage) => (
+                  <article
+                    className={`chat-message ${chatMessage.player_id === activePlayerId ? "is-own-message" : ""}`}
+                    key={chatMessage.id}
+                  >
+                    <div>
+                      <strong>{chatMessage.player_name}</strong>
+                      <time dateTime={chatMessage.created_at}>
+                        {new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(
+                          new Date(chatMessage.created_at)
+                        )}
+                      </time>
+                    </div>
+                    <p>{chatMessage.message}</p>
+                  </article>
+                ))
+              )}
+              <div ref={chatMessagesEndRef} />
+            </div>
+
+            <form
+              className="chat-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void sendCurrentChatMessage();
+              }}
+            >
+              <input
+                value={chatDraft}
+                maxLength={200}
+                onChange={(event) => handleChatDraftChange(event.currentTarget.value)}
+                placeholder="Message"
+                disabled={syncMode !== "remote"}
+                aria-label="Chat message"
+              />
+              <button className="button-primary icon-button" type="submit" disabled={syncMode !== "remote" || chatDraft.trim().length === 0}>
+                <Send size={17} aria-hidden="true" />
+              </button>
+            </form>
+            {chatError !== null ? <p className="chat-error">{chatError}</p> : null}
           </section>
         ) : null}
 
