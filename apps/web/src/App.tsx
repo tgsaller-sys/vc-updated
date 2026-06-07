@@ -38,6 +38,23 @@ import { buildHead } from "./buildInfo";
 const maxSeed = 4294967295;
 type LobbySeatType = "human" | BotStrategy;
 
+function errorMessage(caught: unknown, fallback: string): string {
+  if (caught instanceof Error) {
+    return caught.message;
+  }
+
+  if (
+    typeof caught === "object" &&
+    caught !== null &&
+    "message" in caught &&
+    typeof caught.message === "string"
+  ) {
+    return caught.message;
+  }
+
+  return fallback;
+}
+
 function ordinalLabel(index: number): string {
   const labels = ["First", "Second", "Third", "Fourth"];
   return labels[index] ?? `${index + 1}th`;
@@ -385,7 +402,7 @@ export function App() {
           return;
         }
 
-        setChatError(caught instanceof Error ? caught.message : "Could not load chat.");
+        setChatError(errorMessage(caught, "Could not load chat."));
       }
     }
 
@@ -553,7 +570,7 @@ export function App() {
       setChatError(null);
     } catch (caught) {
       lastChatSentAt.current = 0;
-      setChatError(caught instanceof Error ? caught.message : "Could not send message.");
+      setChatError(errorMessage(caught, "Could not send message."));
     }
   }
 

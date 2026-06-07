@@ -17,6 +17,8 @@ The current repository keeps rules in TypeScript. Supabase stores the authoritat
 
 Supabase schema changes are not deployed by Vercel. If `supabase/schema.sql` changes after you have already deployed the frontend, you must also run the updated SQL in Supabase, or the app can authenticate but fail to create/join remote lobbies.
 
+For existing projects that only need lobby chat added, run `supabase/chat_messages_patch.sql` in the Supabase SQL Editor.
+
 ## Vercel
 
 1. Import this Git repository into Vercel.
