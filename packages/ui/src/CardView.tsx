@@ -98,7 +98,6 @@ export function CardView({ card, selected = false, disabled = false, onClick }: 
     <motion.button
       layout
       {...tapAndHoverProps}
-      animate={{ y: selected ? -24 : 0 }}
       className={`vc-card ${isRed ? "vc-card-red" : "vc-card-black"} ${selected ? "is-selected" : ""}`}
       disabled={disabled}
       type="button"

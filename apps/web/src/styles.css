@@ -959,23 +959,39 @@ button.icon-button {
   display: inline-flex;
   flex: 0 0 auto;
   margin-inline: clamp(-1.55rem, -2.5vw, -0.72rem);
-  transform: rotate(calc(var(--fan-offset) * 1.35deg));
+  transform: translateX(var(--selection-nudge, 0)) translateY(var(--selection-lift, 0))
+    rotate(calc(var(--fan-offset) * 1.35deg));
   transform-origin: 50% 100%;
   transition:
     filter 180ms ease,
+    margin 190ms ease,
     transform 180ms ease;
 }
 
 .hand-card-shell:hover {
   z-index: 2;
-  transform: translateY(-0.35rem) rotate(calc(var(--fan-offset) * 0.8deg));
+  --selection-lift: -0.35rem;
+  transform: translateX(var(--selection-nudge, 0)) translateY(var(--selection-lift, 0))
+    rotate(calc(var(--fan-offset) * 0.8deg));
 }
 
 .hand-card-shell.is-selected {
-  z-index: 3;
+  --selection-lift: -1.65rem;
+  z-index: 8;
+  margin-inline: clamp(-0.9rem, -1.45vw, -0.24rem);
   filter:
     drop-shadow(0 0 12px rgb(255 212 71 / 0.5))
     drop-shadow(0 16px 18px rgb(23 32 47 / 0.22));
+}
+
+.hand-card-shell.is-before-selected {
+  --selection-nudge: -0.65rem;
+  z-index: 1;
+}
+
+.hand-card-shell.is-after-selected {
+  --selection-nudge: 0.65rem;
+  z-index: 1;
 }
 
 .hand .vc-card {
@@ -983,7 +999,9 @@ button.icon-button {
 }
 
 .hand .vc-card.is-selected {
-  filter: drop-shadow(0 18px 24px rgb(23 32 47 / 0.26));
+  filter:
+    drop-shadow(0 0 0.32rem rgb(255 212 71 / 0.72))
+    drop-shadow(0 18px 24px rgb(23 32 47 / 0.26));
 }
 
 .error-text,
@@ -1425,7 +1443,21 @@ button.icon-button {
 
   .hand-card-shell {
     margin-inline: -1.05rem;
-    transform: rotate(calc(var(--fan-offset) * 0.85deg));
+    transform: translateX(var(--selection-nudge, 0)) translateY(var(--selection-lift, 0))
+      rotate(calc(var(--fan-offset) * 0.85deg));
+  }
+
+  .hand-card-shell.is-selected {
+    --selection-lift: -1.25rem;
+    margin-inline: -0.72rem;
+  }
+
+  .hand-card-shell.is-before-selected {
+    --selection-nudge: -0.5rem;
+  }
+
+  .hand-card-shell.is-after-selected {
+    --selection-nudge: 0.5rem;
   }
 
   .notice-text,

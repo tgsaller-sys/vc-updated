@@ -1037,11 +1037,24 @@ export function App() {
             <motion.div layout className="hand">
               {sortedActiveHand.map((card, index) => {
                 const selected = selectedCardIds.includes(card.id);
+                const previousSelected =
+                  index > 0 && selectedCardIds.includes(sortedActiveHand[index - 1]?.id ?? card.id);
+                const nextSelected =
+                  index < sortedActiveHand.length - 1 &&
+                  selectedCardIds.includes(sortedActiveHand[index + 1]?.id ?? card.id);
+                const cardClassName = [
+                  "hand-card-shell",
+                  selected ? "is-selected" : "",
+                  !selected && previousSelected ? "is-after-selected" : "",
+                  !selected && nextSelected ? "is-before-selected" : ""
+                ]
+                  .filter(Boolean)
+                  .join(" ");
 
                 return (
                   <span
                     key={card.id}
-                    className={`hand-card-shell ${selected ? "is-selected" : ""}`}
+                    className={cardClassName}
                     style={{ "--fan-offset": index - (sortedActiveHand.length - 1) / 2 } as CSSProperties}
                   >
                     <CardView
