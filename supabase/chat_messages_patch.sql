@@ -1,6 +1,6 @@
 create table if not exists public.chat_messages (
   id uuid primary key default gen_random_uuid(),
-  lobby_id uuid not null references public.games(id) on delete cascade,
+  lobby_id text not null references public.games(id) on delete cascade,
   player_id text not null,
   player_name text not null,
   message text not null,

@@ -1042,11 +1042,13 @@ export function App() {
                 const nextSelected =
                   index < sortedActiveHand.length - 1 &&
                   selectedCardIds.includes(sortedActiveHand[index + 1]?.id ?? card.id);
+                const betweenSelected = !selected && previousSelected && nextSelected;
                 const cardClassName = [
                   "hand-card-shell",
                   selected ? "is-selected" : "",
-                  !selected && previousSelected ? "is-after-selected" : "",
-                  !selected && nextSelected ? "is-before-selected" : ""
+                  betweenSelected ? "is-between-selected" : "",
+                  !selected && !betweenSelected && previousSelected ? "is-after-selected" : "",
+                  !selected && !betweenSelected && nextSelected ? "is-before-selected" : ""
                 ]
                   .filter(Boolean)
                   .join(" ");
