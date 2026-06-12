@@ -978,18 +978,18 @@ button.icon-button {
 .hand-card-shell.is-selected {
   --selection-lift: -1.65rem;
   z-index: 8;
-  margin-inline: clamp(-0.9rem, -1.45vw, -0.24rem);
+  margin-inline: clamp(-0.24rem, -0.45vw, 0.18rem);
   filter:
     drop-shadow(0 0 12px rgb(255 212 71 / 0.5))
     drop-shadow(0 16px 18px rgb(23 32 47 / 0.22));
 }
 
 .hand-card-shell.is-before-selected {
-  --selection-nudge: -0.5rem;
+  --selection-nudge: -0.82rem;
 }
 
 .hand-card-shell.is-after-selected {
-  --selection-nudge: 0.5rem;
+  --selection-nudge: 0.82rem;
 }
 
 .hand-card-shell.is-between-selected {
@@ -1454,15 +1454,15 @@ button.icon-button {
 
   .hand-card-shell.is-selected {
     --selection-lift: -1.25rem;
-    margin-inline: -0.72rem;
+    margin-inline: -0.34rem;
   }
 
   .hand-card-shell.is-before-selected {
-    --selection-nudge: -0.38rem;
+    --selection-nudge: -0.58rem;
   }
 
   .hand-card-shell.is-after-selected {
-    --selection-nudge: 0.38rem;
+    --selection-nudge: 0.58rem;
   }
 
   .hand-card-shell.is-between-selected {
