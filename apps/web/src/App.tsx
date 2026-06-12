@@ -953,65 +953,6 @@ export function App() {
         ) : null}
 
         {game.phase !== "lobby" ? (
-          <section className="panel chat-panel" aria-label="Lobby chat">
-            <div className="chat-heading">
-              <h2>
-                <MessageSquare size={16} aria-hidden="true" />
-                Chat
-              </h2>
-              <span>{syncMode === "remote" ? "Lobby" : "Online only"}</span>
-            </div>
-
-            <div className="chat-messages" aria-live="polite">
-              {syncMode !== "remote" ? (
-                <p className="chat-empty">Create or join an online lobby to chat.</p>
-              ) : chatMessages.length === 0 ? (
-                <p className="chat-empty">No messages yet.</p>
-              ) : (
-                chatMessages.map((chatMessage) => (
-                  <article
-                    className={`chat-message ${chatMessage.player_id === activePlayerId ? "is-own-message" : ""}`}
-                    key={chatMessage.id}
-                  >
-                    <div>
-                      <strong>{chatMessage.player_name}</strong>
-                      <time dateTime={chatMessage.created_at}>
-                        {new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(
-                          new Date(chatMessage.created_at)
-                        )}
-                      </time>
-                    </div>
-                    <p>{chatMessage.message}</p>
-                  </article>
-                ))
-              )}
-              <div ref={chatMessagesEndRef} />
-            </div>
-
-            <form
-              className="chat-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void sendCurrentChatMessage();
-              }}
-            >
-              <input
-                value={chatDraft}
-                maxLength={200}
-                onChange={(event) => handleChatDraftChange(event.currentTarget.value)}
-                placeholder="Message"
-                disabled={syncMode !== "remote"}
-                aria-label="Chat message"
-              />
-              <button className="button-primary icon-button" type="submit" disabled={syncMode !== "remote" || chatDraft.trim().length === 0}>
-                <Send size={17} aria-hidden="true" />
-              </button>
-            </form>
-            {chatError !== null ? <p className="chat-error">{chatError}</p> : null}
-          </section>
-        ) : null}
-
-        {game.phase !== "lobby" ? (
           <section className="hand-panel player-hand-tray" aria-label="Your hand">
             <div className="hand-actions">
               <button className="button-primary play-action" type="button" disabled={!canPlaySelectedCards} onClick={playSelectedCards}>
@@ -1080,6 +1021,65 @@ export function App() {
                 ))}
               </ol>
             ) : null}
+          </section>
+        ) : null}
+
+        {game.phase !== "lobby" ? (
+          <section className="panel chat-panel" aria-label="Lobby chat">
+            <div className="chat-heading">
+              <h2>
+                <MessageSquare size={16} aria-hidden="true" />
+                Chat
+              </h2>
+              <span>{syncMode === "remote" ? "Lobby" : "Online only"}</span>
+            </div>
+
+            <div className="chat-messages" aria-live="polite">
+              {syncMode !== "remote" ? (
+                <p className="chat-empty">Create or join an online lobby to chat.</p>
+              ) : chatMessages.length === 0 ? (
+                <p className="chat-empty">No messages yet.</p>
+              ) : (
+                chatMessages.map((chatMessage) => (
+                  <article
+                    className={`chat-message ${chatMessage.player_id === activePlayerId ? "is-own-message" : ""}`}
+                    key={chatMessage.id}
+                  >
+                    <div>
+                      <strong>{chatMessage.player_name}</strong>
+                      <time dateTime={chatMessage.created_at}>
+                        {new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(
+                          new Date(chatMessage.created_at)
+                        )}
+                      </time>
+                    </div>
+                    <p>{chatMessage.message}</p>
+                  </article>
+                ))
+              )}
+              <div ref={chatMessagesEndRef} />
+            </div>
+
+            <form
+              className="chat-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void sendCurrentChatMessage();
+              }}
+            >
+              <input
+                value={chatDraft}
+                maxLength={200}
+                onChange={(event) => handleChatDraftChange(event.currentTarget.value)}
+                placeholder="Message"
+                disabled={syncMode !== "remote"}
+                aria-label="Chat message"
+              />
+              <button className="button-primary icon-button" type="submit" disabled={syncMode !== "remote" || chatDraft.trim().length === 0}>
+                <Send size={17} aria-hidden="true" />
+              </button>
+            </form>
+            {chatError !== null ? <p className="chat-error">{chatError}</p> : null}
           </section>
         ) : null}
 
