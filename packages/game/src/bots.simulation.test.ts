@@ -3,6 +3,7 @@ import { assertValidTransition, createInitialGameState, nextBotAction, reduceGam
 import type { BotStrategy, GameAction, GameState, Player, PlayerId } from ".";
 
 const simulationCount = 1000;
+const superHardSimulationCount = 100;
 const maximumActionsPerGame = 1000;
 
 function createSeededRandom(seed: number): () => number {
@@ -21,7 +22,15 @@ function createBotPlayers(strategies: readonly BotStrategy[] = ["easy", "medium"
 
     return {
       id: `bot-${botNumber}`,
-      name: `${botStrategy === "easy" ? "Easy" : botStrategy === "medium" ? "Medium" : "Hard"} Bot ${botNumber}`,
+      name: `${
+        botStrategy === "easy"
+          ? "Easy"
+          : botStrategy === "medium"
+            ? "Medium"
+            : botStrategy === "hard"
+              ? "Hard"
+              : "Super Hard"
+      } Bot ${botNumber}`,
       connected: true,
       joinedAt: `2026-01-01T00:0${index}:00.000Z`,
       kind: "bot",
@@ -154,5 +163,59 @@ describe("four-bot game simulations", () => {
     );
 
     expect(hardWins).toBeGreaterThan(0);
+  }, 120000);
+
+  it(`compares SuperHardBot against MediumBot over ${superHardSimulationCount} full games`, () => {
+    const wins = new Map<PlayerId, number>();
+    const players = createBotPlayers(["super-hard", "medium", "medium", "medium"]);
+
+    for (let seed = 0; seed < superHardSimulationCount; seed += 1) {
+      const finalState = simulateGame(seed + 20000, players);
+      const winnerId = finalState.winnerId;
+
+      if (winnerId === null) {
+        throw new Error(`Simulation seed ${seed + 20000} finished without a winner.`);
+      }
+
+      wins.set(winnerId, (wins.get(winnerId) ?? 0) + 1);
+      expect(finishOrder(finalState), `seed ${seed + 20000}`).toHaveLength(4);
+    }
+
+    const superHardWins = wins.get("bot-1") ?? 0;
+    const mediumWins = superHardSimulationCount - superHardWins;
+    console.info(
+      `SuperHardBot vs MediumBot: superHard=${superHardWins}/${superHardSimulationCount} (${(
+        superHardWins / superHardSimulationCount
+      ).toFixed(3)}), medium=${mediumWins}/${superHardSimulationCount}`
+    );
+
+    expect(superHardWins).toBeGreaterThan(0);
+  }, 120000);
+
+  it(`compares SuperHardBot against HardBot over ${superHardSimulationCount} full games`, () => {
+    const wins = new Map<PlayerId, number>();
+    const players = createBotPlayers(["super-hard", "hard", "hard", "hard"]);
+
+    for (let seed = 0; seed < superHardSimulationCount; seed += 1) {
+      const finalState = simulateGame(seed + 30000, players);
+      const winnerId = finalState.winnerId;
+
+      if (winnerId === null) {
+        throw new Error(`Simulation seed ${seed + 30000} finished without a winner.`);
+      }
+
+      wins.set(winnerId, (wins.get(winnerId) ?? 0) + 1);
+      expect(finishOrder(finalState), `seed ${seed + 30000}`).toHaveLength(4);
+    }
+
+    const superHardWins = wins.get("bot-1") ?? 0;
+    const hardWins = superHardSimulationCount - superHardWins;
+    console.info(
+      `SuperHardBot vs HardBot: superHard=${superHardWins}/${superHardSimulationCount} (${(
+        superHardWins / superHardSimulationCount
+      ).toFixed(3)}), hard=${hardWins}/${superHardSimulationCount}`
+    );
+
+    expect(superHardWins).toBeGreaterThan(0);
   }, 120000);
 });

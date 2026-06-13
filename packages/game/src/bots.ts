@@ -2,11 +2,13 @@ import { sortCardsForPlay } from "./cards";
 import { reduceGameAction } from "./reducer";
 import { chooseEasyBotAction, chooseMediumBotAction } from "./botStrategies";
 import { chooseHardBotAction } from "./hardBotStrategy";
+import { chooseSuperHardBotAction } from "./superHardBotStrategy";
 import type { BotTurnView, EasyBotOptions } from "./botStrategies";
 import type { GameAction, GameState, Player, PlayerId } from "./types";
 
 export { chooseBotAction, chooseEasyBotAction, chooseMediumBotAction } from "./botStrategies";
 export { chooseHardBotAction } from "./hardBotStrategy";
+export { chooseSuperHardBotAction } from "./superHardBotStrategy";
 export type { BotTurnView, EasyBotOptions } from "./botStrategies";
 
 export const botTurnDelayMs = 3000;
@@ -58,6 +60,8 @@ export function nextBotAction(state: GameState, options: EasyBotOptions = {}): G
 
   const view = createBotTurnView(state, state.currentTurn);
   switch (player.botStrategy) {
+    case "super-hard":
+      return chooseSuperHardBotAction(view);
     case "hard":
       return chooseHardBotAction(view);
     case "medium":

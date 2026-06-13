@@ -14,6 +14,7 @@ export {
   chooseEasyBotAction,
   chooseHardBotAction,
   chooseMediumBotAction,
+  chooseSuperHardBotAction,
   createBotTurnView,
   isBotPlayer,
   maximumAutomaticBotTurns,
@@ -22,6 +23,8 @@ export {
 } from "./bots";
 export type { BotTurnView, EasyBotOptions } from "./bots";
 export { createShuffledDeck, dealEqually, dealForVc, dealForVcWithMaxCards, shuffleDeck } from "./deck";
+export { scoreHand } from "./handScoring";
+export type { HandScore, ScoreHandContext, ScoreHandInput } from "./handScoring";
 export { reduceGameAction, assertValidTransition, maxPlayers } from "./reducer";
 export {
   allowAnyOwnedCards,

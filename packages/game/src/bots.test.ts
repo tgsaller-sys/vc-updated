@@ -5,6 +5,7 @@ import {
   chooseEasyBotAction,
   chooseHardBotAction,
   chooseMediumBotAction,
+  chooseSuperHardBotAction,
   createBotTurnView,
   createDeck,
   createInitialGameState,
@@ -607,5 +608,66 @@ describe("computer players", () => {
 
     expect(createBotTurnView(baseState, "bot-a")).toEqual(createBotTurnView(changedHiddenCards, "bot-a"));
     expect(nextBotAction(baseState)).toEqual(nextBotAction(changedHiddenCards));
+  });
+
+  it("routes super-hard bot turns through the public bot view", () => {
+    const state: GameState = {
+      ...fourSeatGame(),
+      players: players.map((player) => (player.id === "bot-a" ? { ...player, botStrategy: "super-hard" } : player)),
+      currentTurn: "bot-a",
+      hands: {
+        ...fourSeatGame().hands,
+        "bot-a": [card("clubs-4"), card("diamonds-4"), card("spades-9")]
+      }
+    };
+    const action = nextBotAction(state);
+
+    expect(action?.type).toBe("play-cards");
+    expect(action).toMatchObject({ actorId: "bot-a" });
+  });
+
+  it("logs why SuperHardBot chose a move when debug logging is provided", () => {
+    const messages: string[] = [];
+    const action = chooseSuperHardBotAction(
+      {
+        actorId: "bot-a",
+        hand: [card("clubs-4"), card("diamonds-4"), card("spades-9")],
+        currentTablePlay: null,
+        isLeading: true,
+        opponentCardCounts: [3, 4, 5],
+        playedCards: [],
+        turnOrder: ["bot-a", "bot-b", "bot-c", "bot-d"]
+      },
+      { debug: (message) => messages.push(message) }
+    );
+
+    expect(action.type).toBe("play-cards");
+    expect(messages.length).toBe(1);
+    expect(messages[0]).toContain("SuperHardBot plays");
+    expect(messages[0]).toContain("score=");
+  });
+
+  it("does not inspect hidden opponent hands when choosing SuperHardBot moves", () => {
+    const publicState: GameState = {
+      ...fourSeatGame(),
+      currentTurn: "bot-a",
+      players: players.map((player) => (player.id === "bot-a" ? { ...player, botStrategy: "super-hard" } : player)),
+      hands: {
+        "human-a": [card("spades-A"), card("hearts-A")],
+        "bot-a": [card("clubs-4"), card("diamonds-4"), card("spades-9"), card("clubs-K")],
+        "bot-b": [card("diamonds-5"), card("diamonds-8")],
+        "human-b": [card("hearts-6"), card("hearts-8")]
+      }
+    };
+    const changedHiddenHands: GameState = {
+      ...publicState,
+      hands: {
+        ...publicState.hands,
+        "human-a": [card("clubs-2"), card("diamonds-2")],
+        "bot-b": [card("hearts-2"), card("spades-2")]
+      }
+    };
+
+    expect(nextBotAction(publicState)).toEqual(nextBotAction(changedHiddenHands));
   });
 });

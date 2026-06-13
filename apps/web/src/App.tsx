@@ -61,7 +61,8 @@ function ordinalLabel(index: number): string {
 }
 
 function botSeatName(strategy: BotStrategy, botNumber: number): string {
-  const label = strategy === "easy" ? "Easy" : strategy === "medium" ? "Medium" : "Hard";
+  const label =
+    strategy === "easy" ? "Easy" : strategy === "medium" ? "Medium" : strategy === "hard" ? "Hard" : "Super Hard";
   return `${label} Bot ${botNumber}`;
 }
 
@@ -838,6 +839,7 @@ export function App() {
                           <option value="easy">Easy Bot</option>
                           <option value="medium">Medium Bot</option>
                           <option value="hard">Hard Bot</option>
+                          <option value="super-hard">Super Hard Bot</option>
                         </select>
                       </label>
                     );
