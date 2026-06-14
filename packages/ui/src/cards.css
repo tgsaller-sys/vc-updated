@@ -87,9 +87,9 @@
   fill: rgb(255 255 255 / 0.55);
 }
 
-@media (max-width: 680px) {
+@media (max-width: 768px) {
   .vc-card {
-    inline-size: clamp(3.65rem, 18vw, 4.65rem);
+    inline-size: clamp(3.95rem, 16.5vw, 4.85rem);
     border-radius: 8px;
     filter: drop-shadow(0 7px 10px rgb(20 26 35 / 0.14));
   }
