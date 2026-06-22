@@ -167,6 +167,8 @@ export function App() {
   const setMaxCardsPerPlayer = useUiStore((state) => state.setMaxCardsPerPlayer);
   const botTurnDelayMs = useUiStore((state) => state.botTurnDelayMs);
   const setBotTurnDelaySeconds = useUiStore((state) => state.setBotTurnDelaySeconds);
+  const autoPassDelayMs = useUiStore((state) => state.autoPassDelayMs);
+  const setAutoPassDelaySeconds = useUiStore((state) => state.setAutoPassDelaySeconds);
   const gameSeed = useUiStore((state) => state.gameSeed);
   const setGameSeed = useUiStore((state) => state.setGameSeed);
   const lobbyCode = useUiStore((state) => state.lobbyCode);
@@ -183,10 +185,12 @@ export function App() {
   const [skipLabel, setSkipLabel] = useState(() => pickSkipLabel());
   const [isRulesOpen, setIsRulesOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<readonly ChatMessage[]>([]);
+  const [chatToast, setChatToast] = useState<ChatMessage | null>(null);
   const [chatDraft, setChatDraft] = useState("");
   const [chatError, setChatError] = useState<string | null>(null);
   const lastPassNoticeKey = useRef<string | null>(null);
   const lastChatSentAt = useRef(0);
+  const seenChatMessageIds = useRef(new Set<string>());
   const chatMessagesEndRef = useRef<HTMLDivElement | null>(null);
   const preferredPlayerName = playerName.trim() || `Player ${localPlayerId.slice(0, 4)}`;
   const [game, setGame] = useState(() => createDemoGame(localPlayerId, preferredPlayerName, createLobbyCode()));
@@ -194,6 +198,7 @@ export function App() {
   const activePlayerId = localPlayer?.id ?? "";
   const activeHand = game.hands[activePlayerId] ?? [];
   const botTurnDelaySeconds = botTurnDelayMs / 1000;
+  const autoPassDelaySeconds = autoPassDelayMs / 1000;
   const sortedActiveHand = useMemo(() => sortCardsForPlay(activeHand), [activeHand]);
   const opponents = useMemo(
     () => game.players.filter((player) => player.id !== localPlayerId),
@@ -240,12 +245,18 @@ export function App() {
       activePlayerId,
       selectedCards.map((card) => card.id)
     ).ok;
+  const activeLegalMoves = useMemo(() => getLegalMovesForPlayer(game, activePlayerId), [activePlayerId, game]);
   const hasLegalCardPlay = useMemo(
     () =>
       !canUseHumanControls ||
-      getLegalMovesForPlayer(game, activePlayerId).some((move) => move.type !== "pass"),
-    [activePlayerId, canUseHumanControls, game]
+      activeLegalMoves.some((move) => move.type !== "pass"),
+    [activeLegalMoves, canUseHumanControls]
   );
+  const canAutoPass =
+    autoPassDelayMs > 0 &&
+    canUseHumanControls &&
+    game.currentLeadingPlay !== null &&
+    activeLegalMoves.every((move) => move.type === "pass");
   const showBombCallout =
     game.currentLeadingPlay !== null && isBombPlay(game.currentLeadingPlay.cards) && game.currentLeadingPlay.cards.length > 1;
   const visibleDiscardPlay = game.currentLeadingPlay ?? game.discardPile.at(-1) ?? null;
@@ -327,6 +338,30 @@ export function App() {
   }, [chatMessages.length]);
 
   useEffect(() => {
+    if (chatToast === null) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setChatToast(null);
+    }, 5200);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [chatToast]);
+
+  useEffect(() => {
+    if (!canAutoPass) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void dispatch({ type: "skip", actorId: activePlayerId });
+    }, autoPassDelayMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activePlayerId, autoPassDelayMs, canAutoPass, game.currentTurn, game.version]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function authenticate() {
@@ -370,13 +405,25 @@ export function App() {
   useEffect(() => {
     if (syncMode !== "remote") {
       setChatMessages([]);
+      setChatToast(null);
       setChatError(null);
+      seenChatMessageIds.current = new Set();
       return undefined;
     }
 
     let cancelled = false;
 
     function addMessage(nextMessage: ChatMessage) {
+      if (seenChatMessageIds.current.has(nextMessage.id)) {
+        return;
+      }
+
+      seenChatMessageIds.current.add(nextMessage.id);
+
+      if (nextMessage.player_id !== activePlayerId) {
+        setChatToast(nextMessage);
+      }
+
       setChatMessages((currentMessages) => {
         if (currentMessages.some((message) => message.id === nextMessage.id)) {
           return currentMessages;
@@ -396,7 +443,16 @@ export function App() {
           return;
         }
 
-        setChatMessages(nextMessages);
+        seenChatMessageIds.current = new Set([
+          ...seenChatMessageIds.current,
+          ...nextMessages.map((message) => message.id)
+        ]);
+        setChatMessages((currentMessages) =>
+          [
+            ...currentMessages,
+            ...nextMessages.filter((message) => !currentMessages.some((current) => current.id === message.id))
+          ].sort((left, right) => Date.parse(left.created_at) - Date.parse(right.created_at))
+        );
         setChatError(null);
       } catch (caught) {
         if (cancelled) {
@@ -414,7 +470,7 @@ export function App() {
       cancelled = true;
       unsubscribe();
     };
-  }, [game.id, syncMode]);
+  }, [activePlayerId, game.id, syncMode]);
 
   useEffect(() => {
     if (syncMode !== "local") {
@@ -662,6 +718,34 @@ export function App() {
   return (
     <main className="app-shell">
       <section className="tabletop" aria-label="VC game table">
+        <AnimatePresence>
+          {chatToast !== null ? (
+            <motion.aside
+              key={chatToast.id}
+              className="chat-toast"
+              role="status"
+              initial={{ opacity: 0, y: -14, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 420, damping: 32 }}
+            >
+              <MessageSquare size={18} aria-hidden="true" />
+              <div>
+                <strong>{chatToast.player_name}</strong>
+                <p>{chatToast.message}</p>
+              </div>
+              <button
+                className="button-ghost icon-button"
+                type="button"
+                onClick={() => setChatToast(null)}
+                aria-label="Dismiss chat notification"
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
+            </motion.aside>
+          ) : null}
+        </AnimatePresence>
+
         <header className="top-bar">
           <div className="brand-block">
             <p className="eyebrow">Lobby {game.id}</p>
@@ -669,6 +753,19 @@ export function App() {
             <p className="game-subtitle">Vietnamese Cards</p>
           </div>
           <div className="status-cluster" aria-label="Game status">
+            <label className="auto-pass-control">
+              <span>Auto-pass</span>
+              <input
+                type="number"
+                min={0}
+                max={120}
+                step={5}
+                value={autoPassDelaySeconds}
+                onChange={(event) => setAutoPassDelaySeconds(event.currentTarget.valueAsNumber)}
+                aria-label="Auto-pass delay in seconds"
+              />
+              <span>s</span>
+            </label>
             <button className="button-ghost rules-button" type="button" onClick={() => setIsRulesOpen(true)}>
               <BookOpen size={16} aria-hidden="true" />
               Rules
@@ -973,7 +1070,8 @@ export function App() {
 
             {canUseHumanControls && !hasLegalCardPlay ? (
               <p className="no-legal-play-text">
-                No legal play available.{game.currentLeadingPlay === null ? "" : " Pass to continue."}
+                No legal play available.
+                {canAutoPass ? ` Auto-passes in ${autoPassDelaySeconds}s.` : game.currentLeadingPlay === null ? "" : " Pass to continue."}
               </p>
             ) : null}
 

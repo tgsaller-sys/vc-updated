@@ -7,12 +7,16 @@ const minMaxCardsPerPlayer = 1;
 const maxMaxCardsPerPlayer = 52;
 const minBotTurnDelayMs = 0;
 const maxBotTurnDelayMs = 30000;
+const defaultAutoPassDelayMs = 30000;
+const minAutoPassDelayMs = 0;
+const maxAutoPassDelayMs = 120000;
 
 interface UiState {
   readonly localPlayerId: PlayerId;
   readonly playerName: string;
   readonly maxCardsPerPlayer: number;
   readonly botTurnDelayMs: number;
+  readonly autoPassDelayMs: number;
   readonly gameSeed: string;
   readonly selectedCardIds: readonly CardId[];
   readonly lobbyCode: string;
@@ -20,6 +24,7 @@ interface UiState {
   readonly setPlayerName: (playerName: string) => void;
   readonly setMaxCardsPerPlayer: (maxCardsPerPlayer: number) => void;
   readonly setBotTurnDelaySeconds: (botTurnDelaySeconds: number) => void;
+  readonly setAutoPassDelaySeconds: (autoPassDelaySeconds: number) => void;
   readonly setGameSeed: (gameSeed: string) => void;
   readonly setLobbyCode: (lobbyCode: string) => void;
   readonly toggleCard: (cardId: CardId) => void;
@@ -58,6 +63,13 @@ function createInitialBotTurnDelayMs(): number {
     : defaultBotTurnDelayMs;
 }
 
+function createInitialAutoPassDelayMs(): number {
+  const storedValue = Number(window.localStorage.getItem("vc.autoPassDelayMs"));
+  return Number.isInteger(storedValue) && storedValue >= minAutoPassDelayMs && storedValue <= maxAutoPassDelayMs
+    ? storedValue
+    : defaultAutoPassDelayMs;
+}
+
 function normalizeMaxCardsPerPlayer(maxCardsPerPlayer: number): number {
   if (!Number.isFinite(maxCardsPerPlayer)) {
     return defaultMaxCardsPerPlayer;
@@ -75,11 +87,21 @@ function normalizeBotTurnDelaySeconds(botTurnDelaySeconds: number): number {
   return Math.min(maxBotTurnDelayMs, Math.max(minBotTurnDelayMs, botTurnDelayMs));
 }
 
+function normalizeAutoPassDelaySeconds(autoPassDelaySeconds: number): number {
+  if (!Number.isFinite(autoPassDelaySeconds)) {
+    return defaultAutoPassDelayMs;
+  }
+
+  const autoPassDelayMs = Math.round(autoPassDelaySeconds * 1000);
+  return Math.min(maxAutoPassDelayMs, Math.max(minAutoPassDelayMs, autoPassDelayMs));
+}
+
 export const useUiStore = create<UiState>((set) => ({
   localPlayerId: createLocalPlayerId(),
   playerName: createInitialPlayerName(),
   maxCardsPerPlayer: createInitialMaxCardsPerPlayer(),
   botTurnDelayMs: createInitialBotTurnDelayMs(),
+  autoPassDelayMs: createInitialAutoPassDelayMs(),
   gameSeed: "",
   selectedCardIds: [],
   lobbyCode: "",
@@ -97,6 +119,11 @@ export const useUiStore = create<UiState>((set) => ({
     const nextBotTurnDelayMs = normalizeBotTurnDelaySeconds(botTurnDelaySeconds);
     window.localStorage.setItem("vc.botTurnDelayMs", String(nextBotTurnDelayMs));
     set({ botTurnDelayMs: nextBotTurnDelayMs });
+  },
+  setAutoPassDelaySeconds: (autoPassDelaySeconds) => {
+    const nextAutoPassDelayMs = normalizeAutoPassDelaySeconds(autoPassDelaySeconds);
+    window.localStorage.setItem("vc.autoPassDelayMs", String(nextAutoPassDelayMs));
+    set({ autoPassDelayMs: nextAutoPassDelayMs });
   },
   setGameSeed: (gameSeed) => set({ gameSeed }),
   setLobbyCode: (lobbyCode) => set({ lobbyCode: lobbyCode.toUpperCase() }),
