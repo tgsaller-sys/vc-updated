@@ -13,6 +13,7 @@ import {
   validatePlay,
   type GameAction,
   type GameState,
+  type PlayedMove,
   type Player,
   type BotStrategy
 } from "@vc/game";
@@ -92,6 +93,27 @@ function pickSkipLabel(): string {
   }
 
   return "Knuckle-rap";
+}
+
+function moveFormatLabel(play: PlayedMove): string {
+  if (play.type === "straight") {
+    return `${play.length}-card straight`;
+  }
+
+  if (play.type === "bomb") {
+    return play.metadata?.bombKind === "double-straight" ? "double-straight bomb" : "bomb";
+  }
+
+  return play.type;
+}
+
+function previousPlayLabel(play: PlayedMove | null, players: readonly Player[]): string | null {
+  if (play === null) {
+    return null;
+  }
+
+  const playerName = players.find((player) => player.id === play.playerId)?.name ?? "A player";
+  return `${playerName} played a ${moveFormatLabel(play)}`;
 }
 
 function createRandomSeed(): number {
@@ -183,6 +205,7 @@ export function App() {
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [passNotice, setPassNotice] = useState<string | null>(null);
   const [skipLabel, setSkipLabel] = useState(() => pickSkipLabel());
+  const [autoPassRemainingSeconds, setAutoPassRemainingSeconds] = useState<number | null>(null);
   const [isRulesOpen, setIsRulesOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<readonly ChatMessage[]>([]);
   const [chatToast, setChatToast] = useState<ChatMessage | null>(null);
@@ -260,6 +283,10 @@ export function App() {
   const showBombCallout =
     game.currentLeadingPlay !== null && isBombPlay(game.currentLeadingPlay.cards) && game.currentLeadingPlay.cards.length > 1;
   const visibleDiscardPlay = game.currentLeadingPlay ?? game.discardPile.at(-1) ?? null;
+  const visibleDiscardPlayLabel = useMemo(
+    () => previousPlayLabel(visibleDiscardPlay, game.players),
+    [game.players, visibleDiscardPlay]
+  );
   const winnerName =
     game.winnerId === null
       ? null
@@ -351,14 +378,25 @@ export function App() {
 
   useEffect(() => {
     if (!canAutoPass) {
+      setAutoPassRemainingSeconds(null);
       return undefined;
     }
 
+    const autoPassDeadline = Date.now() + autoPassDelayMs;
+    const updateCountdown = () => {
+      setAutoPassRemainingSeconds(Math.max(0, Math.ceil((autoPassDeadline - Date.now()) / 1000)));
+    };
+
+    updateCountdown();
+    const intervalId = window.setInterval(updateCountdown, 1000);
     const timeoutId = window.setTimeout(() => {
       void dispatch({ type: "skip", actorId: activePlayerId });
     }, autoPassDelayMs);
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
   }, [activePlayerId, autoPassDelayMs, canAutoPass, game.currentTurn, game.version]);
 
   useEffect(() => {
@@ -1017,35 +1055,39 @@ export function App() {
               </AnimatePresence>
             </div>
 
-            <div className="discard-zone" aria-label="Discard pile">
-              <AnimatePresence mode="popLayout">
-                {visibleDiscardPlay === null ? (
-                  <motion.div
-                    layout
-                    key="empty-discard"
-                    className="discard-placeholder"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    Center pile
-                  </motion.div>
-                ) : (
-                  visibleDiscardPlay.cards.map((card, index) => (
+            <div className="table-play-stack">
+              <div className="discard-zone" aria-label="Discard pile">
+                <AnimatePresence mode="popLayout">
+                  {visibleDiscardPlay === null ? (
                     <motion.div
                       layout
-                      key={card.id}
-                      className="center-play-card"
-                      initial={{ opacity: 0, y: 70, scale: 0.9, rotate: -14 }}
-                      animate={{ opacity: 1, y: 0, scale: 1, rotate: (index - visibleDiscardPlay.cards.length / 2) * 5 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ type: "spring", stiffness: 430, damping: 28 }}
+                      key="empty-discard"
+                      className="discard-placeholder"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
                     >
-                      <CardView card={card} disabled />
+                      Center pile
                     </motion.div>
-                  ))
-                )}
-              </AnimatePresence>
+                  ) : (
+                    visibleDiscardPlay.cards.map((card, index) => (
+                      <motion.div
+                        layout
+                        key={card.id}
+                        className="center-play-card"
+                        initial={{ opacity: 0, y: 70, scale: 0.9, rotate: -14 }}
+                        animate={{ opacity: 1, y: 0, scale: 1, rotate: (index - visibleDiscardPlay.cards.length / 2) * 5 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ type: "spring", stiffness: 430, damping: 28 }}
+                      >
+                        <CardView card={card} disabled />
+                      </motion.div>
+                    ))
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {visibleDiscardPlayLabel !== null ? <p className="previous-play-label">{visibleDiscardPlayLabel}</p> : null}
             </div>
           </div>
           </section>
@@ -1071,7 +1113,11 @@ export function App() {
             {canUseHumanControls && !hasLegalCardPlay ? (
               <p className="no-legal-play-text">
                 No legal play available.
-                {canAutoPass ? ` Auto-passes in ${autoPassDelaySeconds}s.` : game.currentLeadingPlay === null ? "" : " Pass to continue."}
+                {canAutoPass
+                  ? ` Auto-passes in ${autoPassRemainingSeconds ?? autoPassDelaySeconds}s.`
+                  : game.currentLeadingPlay === null
+                    ? ""
+                    : " Pass to continue."}
               </p>
             ) : null}
 

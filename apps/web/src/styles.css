@@ -472,9 +472,17 @@ select:focus-visible {
   text-transform: uppercase;
 }
 
+.table-play-stack {
+  grid-area: pile;
+  display: grid;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  inline-size: 100%;
+}
+
 .discard-zone {
   display: flex;
-  grid-area: pile;
   align-items: center;
   justify-content: center;
   inline-size: 100%;
@@ -498,6 +506,22 @@ select:focus-visible {
   color: rgb(255 255 255 / 0.78);
   font-weight: 900;
   text-align: center;
+}
+
+.previous-play-label {
+  justify-self: center;
+  max-inline-size: min(100%, 22rem);
+  margin: 0;
+  padding: 0.28rem 0.62rem;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.12);
+  color: rgb(255 255 255 / 0.86);
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: center;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.18);
 }
 
 .center-play-card {
